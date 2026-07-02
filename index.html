@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<title>CKS PM BOQ/QT Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0D1F17;--panel:#0F2019;--card:#FFFFFF;
+  --g:#04522B;--gm:#1A7A47;--gl:#E8F5EE;--glit:#2ECC71;--gd:#033D1F;
+  --amb:#92600A;--ambl:#FEF3C7;--ambb:#D97706;
+  --red:#991B1B;--redl:#FEE2E2;
+  --ink:#111827;--mut:#6B7280;--line:#E5E7EB;--line2:#F3F4F6;
+  --blue:#1E40AF;--bluel:#DBEAFE;
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'Sarabun',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);font-size:14px;overflow:hidden}
+
+/* ── TOPBAR ──────────────────────────────── */
+#topbar{height:52px;background:var(--panel);border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;padding:0 20px;gap:16px;flex-shrink:0}
+.tb-logo{display:flex;align-items:center;gap:10px}
+.logo-badge{background:var(--g);color:#fff;font-family:var(--mono);font-weight:700;font-size:13px;padding:4px 10px;border-radius:4px;letter-spacing:.04em}
+.logo-sub{color:rgba(255,255,255,.35);font-size:.72rem;font-family:var(--mono)}
+.tb-title{color:#EAF6EF;font-weight:600;font-size:.95rem;flex:1}
+.tb-total{font-family:var(--mono);font-size:.9rem;font-weight:600;color:var(--glit);padding:0 8px}
+.tbtn{padding:6px 14px;border-radius:6px;font-family:var(--sans);font-size:.8rem;font-weight:600;cursor:pointer;border:1px solid;white-space:nowrap;transition:all .15s}
+.tbtn-outline{background:transparent;color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.2)}
+.tbtn-outline:hover{background:rgba(255,255,255,.07)}
+.tbtn-export{background:#1E40AF;color:#fff;border-color:#1E40AF}
+.tbtn-export:hover{background:#1D4ED8}
+
+/* ── LAYOUT ──────────────────────────────── */
+#wrap{display:grid;grid-template-columns:390px 1fr;height:calc(100vh - 52px)}
+
+/* ── LEFT INPUT ──────────────────────────── */
+#left{background:#F9FAFB;overflow-y:auto;border-right:1px solid var(--line)}
+#left::-webkit-scrollbar{width:4px}
+#left::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+
+.sec{border-bottom:1px solid var(--line);padding:14px 16px}
+.sec-hd{display:flex;align-items:center;gap:7px;margin-bottom:11px}
+.sec-ico{font-size:.9rem}
+.sec-lbl{font-weight:700;font-size:.82rem;color:var(--ink)}
+.sec-sub{font-size:.7rem;color:var(--mut);margin-left:auto}
+
+/* meta */
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.mf{display:flex;flex-direction:column;gap:3px}
+.mf.full{grid-column:1/-1}
+.mf label{font-size:.68rem;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+.mf input,.mf select{border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-family:var(--sans);font-size:.83rem;color:var(--ink);background:#fff;outline:none;transition:border-color .15s;width:100%}
+.mf input:focus,.mf select:focus{border-color:var(--g)}
+
+/* stepper row */
+.frow{display:flex;align-items:center;margin-bottom:7px;gap:8px}
+.frow:last-child{margin:0}
+.flbl{font-size:.82rem;flex:1;color:var(--ink);line-height:1.35}
+.fsub{font-size:.7rem;color:var(--mut);display:block;margin-top:1px}
+.stpr{display:flex;align-items:center;gap:3px}
+.sb{width:26px;height:26px;border-radius:5px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--mono);transition:all .12s;flex-shrink:0}
+.sb:hover{background:var(--gl);border-color:var(--g)}
+.sv{font-family:var(--mono);font-size:.85rem;font-weight:600;color:var(--g);min-width:30px;text-align:center}
+
+/* toggle */
+.trow{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.trow:last-child{margin:0}
+.tgl{width:36px;height:20px;border-radius:10px;background:var(--line);cursor:pointer;position:relative;transition:background .18s;flex-shrink:0}
+.tgl.on{background:var(--g)}
+.tgl::after{content:'';width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:3px;left:3px;transition:left .18s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.tgl.on::after{left:19px}
+.tlbl{font-size:.82rem;flex:1;color:var(--ink)}
+
+/* inline qty after toggle */
+.tgl-qty{display:flex;align-items:center;gap:3px;margin-left:6px}
+
+/* site expense row */
+.site-row{margin-bottom:9px}
+.site-row:last-child{margin:0}
+.site-row-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px}
+.site-row-lbl{font-size:.82rem;font-weight:600;color:var(--ink)}
+.site-row-desc{font-size:.7rem;color:var(--mut);margin-bottom:5px;line-height:1.45}
+.site-inp{width:100%;border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-family:var(--mono);font-size:.82rem;color:var(--ink);background:#fff;outline:none;transition:border-color .15s}
+.site-inp:focus{border-color:var(--g)}
+.site-inp::placeholder{color:#9CA3AF;font-family:var(--sans);font-size:.78rem}
+
+.add-btn{width:100%;padding:6px;border:1px dashed #D1D5DB;border-radius:6px;background:transparent;color:var(--mut);font-size:.78rem;cursor:pointer;font-family:var(--sans);margin-top:8px;transition:all .15s}
+.add-btn:hover{border-color:var(--g);color:var(--g);background:var(--gl)}
+
+.rfq-note{background:#FEF3C7;border:1px solid #D97706;border-radius:6px;padding:8px 10px;font-size:.75rem;color:#92600A;margin-bottom:8px;line-height:1.5}
+
+/* ── RIGHT OUTPUT ─────────────────────────── */
+#right{background:#fff;overflow-y:auto;display:flex;flex-direction:column}
+#right::-webkit-scrollbar{width:4px}
+#right::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+
+.out-tabs{display:flex;background:#F3F4F6;border-bottom:1px solid var(--line);padding:0 20px;flex-shrink:0}
+.otab{padding:12px 16px;font-size:.82rem;font-weight:600;cursor:pointer;color:var(--mut);border-bottom:2px solid transparent;transition:all .15s}
+.otab.on{color:var(--g);border-bottom-color:var(--g)}
+
+#out-content{flex:1;padding:24px;overflow-y:auto}
+
+/* QT header block (white paper look) */
+.qt-paper{background:#fff;border:1px solid var(--line);border-radius:8px;padding:22px 24px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.qt-paper-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid var(--g);padding-bottom:14px;margin-bottom:16px}
+.qt-paper-left{}
+.qt-co-name{font-size:1.05rem;font-weight:700;color:var(--g)}
+.qt-co-addr{font-size:.72rem;color:var(--mut);margin-top:2px;line-height:1.6}
+.qt-doc-block{text-align:right}
+.qt-doc-type{font-size:1.1rem;font-weight:700;color:var(--ink);letter-spacing:.03em}
+.qt-doc-meta{font-size:.75rem;color:var(--mut);margin-top:4px;line-height:1.7}
+
+.qt-parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.qt-party-lbl{font-size:.68rem;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.qt-party-val{font-size:.88rem;font-weight:600;color:var(--ink)}
+
+/* BOQ table */
+.boq-tbl{width:100%;border-collapse:collapse;font-size:.82rem;margin-bottom:4px}
+.boq-tbl thead tr{background:var(--g)}
+.boq-tbl thead th{color:#fff;font-weight:600;padding:8px 10px;text-align:left;font-size:.75rem;letter-spacing:.02em}
+.boq-tbl thead th:last-child,.boq-tbl thead th:nth-last-child(2){text-align:right}
+.boq-tbl tbody tr:nth-child(even):not(.grp-row):not(.sub-row):not(.tot-row):not(.grand-row){background:#F9FAFB}
+.boq-tbl tbody td{padding:7px 10px;border-bottom:1px solid var(--line2);vertical-align:top}
+.boq-tbl tbody td.num{text-align:right;font-family:var(--mono);font-size:.8rem}
+.boq-tbl tbody td.unit{color:var(--mut);font-size:.78rem}
+.grp-row td{background:var(--gl)!important;font-weight:700;color:var(--g);font-size:.78rem;padding:5px 10px;border-bottom:1px solid #C6E0CF!important}
+.sub-row td{background:#FFFBEB!important;color:#92600A;font-size:.75rem;padding:5px 10px;border-bottom:1px solid #FDE68A!important}
+.warn-cell .wb{display:inline-block;font-size:.65rem;padding:1px 5px;border-radius:3px;background:#FEF3C7;color:#B45309;margin-left:5px;font-family:var(--mono)}
+.tot-row td{background:var(--gl)!important;font-weight:600;border-bottom:none!important;padding:8px 10px;font-size:.82rem}
+.grand-row td{background:var(--g)!important;color:#fff!important;font-weight:700;padding:10px 10px;font-size:.88rem;border-bottom:none!important}
+.grand-row td.num{color:#fff!important;font-family:var(--mono);font-size:.95rem}
+
+/* QT simplified table */
+.qt-tbl{width:100%;border-collapse:collapse;font-size:.83rem;margin-bottom:4px}
+.qt-tbl thead tr{background:var(--g)}
+.qt-tbl thead th{color:#fff;font-weight:600;padding:8px 10px;text-align:left;font-size:.75rem}
+.qt-tbl thead th:last-child{text-align:right}
+.qt-tbl tbody tr:nth-child(even):not(.qt-tot):not(.qt-vat):not(.qt-grand){background:#F9FAFB}
+.qt-tbl tbody td{padding:8px 10px;border-bottom:1px solid var(--line2)}
+.qt-tbl tbody td.qr{text-align:right;font-family:var(--mono)}
+.qt-tot td{background:var(--gl)!important;font-weight:600;border-bottom:none!important}
+.qt-vat td{background:#F9FAFB!important;color:var(--mut);font-size:.78rem}
+.qt-grand td{background:var(--g)!important;color:#fff!important;font-weight:700;font-size:.9rem;border-bottom:none!important}
+.qt-grand td.qr{font-family:var(--mono);font-size:1rem;color:#fff!important}
+
+/* remark */
+.remark-box{background:#F9FAFB;border:1px solid var(--line);border-radius:6px;padding:12px 14px;font-size:.77rem;color:var(--mut);line-height:1.85;margin-top:12px}
+.remark-box b{color:var(--ink)}
+
+/* scope */
+.scope-box{background:#fff;border:1px solid var(--line);border-radius:7px;padding:14px 16px;margin-bottom:10px}
+.scope-ttl{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);margin-bottom:8px}
+.si{display:flex;gap:7px;font-size:.82rem;color:var(--ink);line-height:1.7}
+.si::before{content:'✓';color:var(--g);font-weight:700;flex-shrink:0}
+.sx{display:flex;gap:7px;font-size:.82rem;color:var(--mut);line-height:1.7}
+.sx::before{content:'×';color:#D1D5DB;flex-shrink:0}
+
+/* pre-quotation customer-facing summary */
+.prequote-paper{background:#fff;border:1px solid var(--line);border-radius:8px;padding:28px 32px;box-shadow:0 1px 4px rgba(0,0,0,.06);color:var(--ink);line-height:1.75}
+.prequote-head{border-bottom:3px solid var(--g);padding-bottom:16px;margin-bottom:18px}
+.prequote-brand{color:var(--g);font-weight:700;font-size:1.05rem}
+.prequote-title{font-size:1.35rem;font-weight:800;margin-top:4px}
+.prequote-subtitle{color:var(--mut);font-size:.86rem}
+.prequote-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;background:#F9FAFB;border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin:16px 0;font-size:.86rem}
+.prequote-intro{background:var(--gl);border-left:4px solid var(--g);padding:12px 14px;border-radius:6px;margin:16px 0 20px}
+.pq-section{margin:18px 0;padding-bottom:16px;border-bottom:1px solid var(--line2)}
+.pq-section-title{font-size:1.05rem;font-weight:800;color:var(--g);margin-bottom:6px}
+.pq-risk{background:#FFFBEB;border:1px solid #FDE68A;color:#7C2D12;padding:10px 12px;border-radius:6px;font-weight:700;margin-bottom:8px}
+.pq-body{font-size:.88rem;color:var(--ink)}
+.pq-next{margin-top:22px;background:#F9FAFB;border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.pq-note{margin-top:12px;color:var(--mut);font-size:.78rem}
+
+/* warn strip */
+.warns{margin-bottom:14px}
+.witem{display:flex;gap:7px;align-items:flex-start;background:#FFFBEB;border:1px solid #FDE68A;border-radius:6px;padding:7px 10px;margin-bottom:5px;font-size:.78rem;color:#92600A;line-height:1.5}
+
+/* empty */
+.empty-state{text-align:center;padding:60px 20px;color:#9CA3AF}
+.empty-state .ei{font-size:2.5rem;margin-bottom:12px}
+
+/* toast */
+#toast{position:fixed;bottom:24px;right:24px;background:var(--g);color:#fff;padding:10px 18px;border-radius:8px;font-weight:600;font-size:.84rem;z-index:999;opacity:0;transition:opacity .25s;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+#toast.show{opacity:1}
+
+/* Scope of Work sub-row */
+.sow-row td{background:#FAFAFA!important;padding:2px 10px 10px 32px!important;border-bottom:1px solid var(--line2)!important}
+.sow-list{font-size:.72rem;color:var(--mut);line-height:2;margin:0;padding:0;list-style:none}
+.sow-list li::before{content:'— ';color:#9CA3AF}
+
+/* ── manual-input badge (Site Expense) ──────── */
+.manual-badge{display:inline-block;font-size:.64rem;font-weight:700;padding:1px 7px;border-radius:10px;background:#FEF3C7;color:#92600A;margin-left:6px;letter-spacing:.01em;vertical-align:middle}
+
+/* lighter placeholder vs real entered value */
+.site-inp{font-weight:600;color:var(--ink)}
+.site-inp::placeholder{color:#C7CCD3;font-weight:400;font-family:var(--sans);font-size:.78rem}
+
+/* small select used inline */
+.mini-select{border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-family:var(--sans);font-size:.8rem;color:var(--ink);background:#fff;outline:none;width:100%}
+.mini-select:focus{border-color:var(--g)}
+.tr-add-row{display:grid;grid-template-columns:1fr 120px auto;gap:8px;align-items:center}
+.tr-add-btn{width:auto;margin-top:0;padding:6px 12px;white-space:nowrap}
+.tr-price-hint{font-size:.72rem;color:var(--mut);line-height:1.45;margin-top:6px}
+.tr-item-controls{display:flex;align-items:center;justify-content:flex-end;gap:5px;flex-wrap:wrap}
+.tr-row-price{font-family:var(--mono);font-size:.72rem;font-weight:600;color:var(--g);white-space:nowrap}
+.asset-card{border:1px solid var(--line);border-radius:7px;background:#fff;padding:10px 12px;margin-bottom:9px}
+.asset-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}
+.asset-title{font-size:.86rem;font-weight:700;color:var(--ink);line-height:1.35}
+.asset-sub{font-family:var(--mono);font-size:.72rem;font-weight:600;color:var(--g);margin-top:2px}
+.asset-remove{border:0;background:transparent;color:#9CA3AF;cursor:pointer;font-size:1.05rem;line-height:1;padding:2px 4px}
+.asset-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff}
+.seg-btn{flex:1;border:0;background:#fff;color:var(--mut);font-family:var(--sans);font-size:.78rem;font-weight:700;padding:7px 8px;cursor:pointer}
+.seg-btn.on{background:var(--g);color:#fff}
+.addon-list{display:grid;gap:6px}
+.addon-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:.8rem;color:var(--ink)}
+.addon-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--g)}
+.addon-price{font-family:var(--mono);font-size:.72rem;color:var(--g);font-weight:600;white-space:nowrap}
+.addon-qty{width:72px;border:1px solid var(--line);border-radius:5px;padding:4px 6px;font-family:var(--mono);font-size:.78rem;color:var(--ink);background:#fff}
+.required-missing{border-color:var(--red)!important;background:#FFF7F7!important}
+
+/* sub-block divider inside a section */
+.subdiv{padding-top:9px;margin-top:9px;border-top:1px dashed var(--line)}
+.subdiv-lbl{font-size:.68rem;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px}
+
+/* fire pump cost calculator */
+.fp-calc{background:#FFF7ED;border:1px solid #FDBA74;border-radius:7px;padding:10px 12px;margin-top:8px;font-size:.78rem;color:#7C2D12}
+.fp-calc-row{display:flex;justify-content:space-between;padding:2px 0}
+.fp-calc-row.tot{border-top:1px solid #FDBA74;margin-top:5px;padding-top:6px;font-weight:700}
+
+/* QT paper logo header */
+.qt-logo-row{display:flex;align-items:center;gap:12px}
+.qt-logo-img{height:52px;width:auto;object-fit:contain;border-radius:4px}
+
+/* document export border frame (used for PDF capture) */
+.export-frame{border:3px solid var(--g);border-radius:10px;padding:18px;position:relative}
+
+/* responsive layout */
+@media (max-width:900px){
+  html,body{height:auto;min-height:100%}
+  body{overflow:auto;font-size:15px;background:#fff;-webkit-text-size-adjust:100%}
+  input,select,button{font:inherit}
+  img{max-width:100%;height:auto}
+
+  #topbar{height:auto;min-height:52px;position:sticky;top:0;z-index:50;flex-wrap:wrap;align-items:center;padding:10px 12px;gap:8px}
+  #topbar>*{min-width:0}
+  .tb-logo{gap:8px;flex:0 0 auto}
+  .logo-sub{display:none}
+  .tb-title{flex:1 1 160px;font-size:.95rem;line-height:1.25;white-space:normal}
+  .tb-total{order:2;flex:1 0 100%;padding:2px 0 0;font-size:1rem}
+  .tbtn{flex:1 1 calc(50% - 4px);min-height:40px;padding:9px 10px;font-size:.86rem}
+
+  #wrap{display:block;height:auto;min-height:calc(100vh - 52px)}
+  #left{overflow:visible;border-right:0;border-bottom:1px solid var(--line)}
+  #right{overflow:visible;display:block;min-height:50vh}
+
+  .sec{padding:14px}
+  .sec-hd{gap:8px}
+  .sec-lbl{font-size:.9rem}
+  .meta-grid{gap:10px}
+  .mf{gap:4px}
+  .mf input,.mf select,.site-inp,.mini-select{min-height:40px;font-size:.92rem}
+
+  .frow{align-items:flex-start;gap:10px;margin-bottom:10px}
+  .flbl,.tlbl,.site-row-lbl,.qt-party-val,.qt-co-name,.qt-co-addr{min-width:0;overflow-wrap:anywhere}
+  .flbl,.tlbl,.site-row-lbl{font-size:.9rem}
+  .fsub,.site-row-desc{font-size:.76rem;line-height:1.45}
+  .stpr{margin-left:auto;flex-shrink:0}
+  .sb{width:34px;height:34px;font-size:1.1rem}
+  .sv{min-width:34px;font-size:.95rem}
+  .trow{align-items:flex-start;margin-bottom:10px}
+  .tgl{width:44px;height:24px;border-radius:12px;margin-top:2px}
+  .tgl::after{width:18px;height:18px;border-radius:50%}
+  .tgl.on::after{left:23px}
+  .add-btn{min-height:40px;font-size:.86rem}
+
+  .out-tabs{overflow-x:auto;padding:0 12px;-webkit-overflow-scrolling:touch}
+  .otab{flex:1 0 auto;text-align:center;padding:13px 12px;font-size:.88rem;white-space:nowrap}
+  #out-content{padding:14px;overflow:visible}
+
+  .qt-paper{max-width:100%;overflow-x:auto;padding:16px;margin-bottom:14px;border-radius:6px;box-shadow:none;-webkit-overflow-scrolling:touch}
+  .qt-paper-head{flex-direction:column;gap:12px;padding-bottom:12px;margin-bottom:14px}
+  .qt-logo-row{align-items:flex-start;gap:10px}
+  .qt-logo-img{height:42px;flex-shrink:0}
+  .qt-doc-block{text-align:left;width:100%}
+  .qt-doc-meta{text-align:left!important}
+  .qt-parties{grid-template-columns:1fr;gap:10px}
+  .qt-co-name{font-size:.98rem;line-height:1.35}
+  .qt-co-addr{font-size:.72rem}
+
+  .boq-tbl,.qt-tbl{min-width:620px;font-size:.82rem}
+  .boq-tbl thead th,.qt-tbl thead th{padding:8px}
+  .boq-tbl tbody td,.qt-tbl tbody td{padding:8px}
+  .scope-box{padding:12px}
+  .remark-box{font-size:.82rem;line-height:1.7}
+  .empty-state{padding:38px 12px}
+  .export-frame{padding:14px;border-width:2px}
+  #toast{left:12px;right:12px;bottom:12px;text-align:center}
+}
+
+@media (max-width:560px){
+  body{font-size:16px}
+  #topbar{padding:8px}
+  .logo-badge{font-size:12px;padding:4px 8px}
+  .tb-title{font-size:.9rem}
+  .tbtn{flex-basis:calc(50% - 4px);min-height:42px;padding:9px 8px}
+  .meta-grid{grid-template-columns:1fr}
+  .sec-sub{margin-left:0;flex-basis:100%}
+  .frow{gap:8px}
+  .trow{gap:9px}
+  .tgl-qty{margin-left:0}
+  .tr-add-row{grid-template-columns:1fr}
+  .tr-add-btn{width:100%}
+  .tr-item-controls{justify-content:flex-start}
+  .asset-grid{grid-template-columns:1fr}
+  .asset-card-head{align-items:flex-start}
+  .addon-row{grid-template-columns:auto 1fr;align-items:flex-start}
+  .addon-price,.addon-qty{grid-column:2}
+  .site-row-head{align-items:flex-start;gap:8px}
+  #out-content{padding:10px}
+  .qt-paper{padding:12px}
+  .qt-logo-row{flex-direction:column}
+  .qt-logo-img{height:40px}
+  .boq-tbl,.qt-tbl{min-width:560px;font-size:.78rem}
+  .prequote-paper{padding:16px}
+  .prequote-meta{grid-template-columns:1fr}
+  .sow-row td{padding-left:16px!important}
+}
+
+@media (max-width:380px){
+  .tbtn{flex-basis:100%}
+  .boq-tbl,.qt-tbl{min-width:520px}
+}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="tb-logo">
+    <span class="logo-badge">CKS</span>
+    <span class="logo-sub">POWER ENGINEERING</span>
+  </div>
+  <span class="tb-title">PM BOQ / QT Assistant</span>
+  <span class="tb-total" id="gtot">฿0</span>
+  <button class="tbtn tbtn-outline" onclick="clearAll()">ล้าง</button>
+  <button class="tbtn tbtn-export" style="background:#04522B;border-color:#04522B" onclick="saveQT()">💾 Save QT</button>
+  <button class="tbtn tbtn-export" onclick="doExport()">⬇ Export Excel</button>
+  <button class="tbtn tbtn-export" style="background:#92600A;border-color:#92600A" onclick="doExportPDF()">⬇ Export PDF</button>
+  <button class="tbtn tbtn-export" style="background:#0F766E;border-color:#0F766E" onclick="doExportPreQuotation()">⬇ Export Pre-Quotation</button>
+  <button class="tbtn tbtn-outline" onclick="setupBackendUrl()" title="ตั้งค่า Google Apps Script URL">⚙ ตั้งค่า</button>
+</div>
+
+<div id="wrap">
+<!-- ═══ LEFT ═══ -->
+<div id="left">
+
+  <!-- META -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-ico">📋</span><span class="sec-lbl">ข้อมูลงาน</span></div>
+    <div class="meta-grid">
+      <div class="mf full"><label>ชื่อลูกค้า</label><input id="mc" required placeholder="เช่น Crown Foods Co., Ltd." oninput="render()"></div>
+      <div class="mf"><label>เบอร์โทรลูกค้า</label><input id="mphone" required placeholder="เช่น 081-234-5678" oninput="render()"></div>
+      <div class="mf"><label>Email ลูกค้า</label><input id="memail" type="email" required placeholder="เช่น customer@example.com" oninput="render()"></div>
+      <div class="mf full"><label>สถานที่ / โรงงาน</label><input id="ms" required placeholder="เช่น โรงงานรามคำแหง" oninput="render()"></div>
+      <div class="mf full"><label>โครงการ / Project</label><input id="mp" required placeholder="เช่น PM ประจำปี 2568" oninput="render()"></div>
+      <div class="mf"><label>วันเข้า Site Survey</label><input type="date" id="mdate" required oninput="render()"></div>
+      <div class="mf"><label>วันหมดอายุใบเสนอราคา</label><input type="date" id="mexp" required oninput="render()"></div>
+      <div class="mf full"><label>ชื่อผู้ออกใบเสนอราคา</label><input id="missuer" required placeholder="เช่น กอล์ฟ — Senior Engineer" oninput="render()"></div>
+    </div>
+  </div>
+
+
+  <!-- HV -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-ico">🔴</span><span class="sec-lbl">ระบบไฟฟ้าแรงสูง (HV)</span></div>
+    <div class="frow"><div class="flbl">ชุดอุปกรณ์แรงสูง เสาคู่<span class="fsub">งาน PM อุปกรณ์บนเสาไฟฟ้าแรงสูงแบบ 2 เสา (Double Pole) — คัตเอาท์ ฟิวส์ ลูกถ้วย จุดต่อสาย นับเป็น 1 ชุดต่อจุดติดตั้ง</span></div><div class="stpr"><button class="sb" onclick="st('hv_pair',-1)">−</button><span class="sv" id="d_hv_pair">0</span><button class="sb" onclick="st('hv_pair',1)">+</button><input type="hidden" id="hv_pair" value="0"></div></div>
+    <div class="frow"><div class="flbl">ชุดอุปกรณ์แรงสูง เสาเดี่ยว<span class="fsub">งานเดียวกับเสาคู่ แต่ติดตั้งบนเสาต้นเดียว (Single Pole) พื้นที่จำกัดกว่า</span></div><div class="stpr"><button class="sb" onclick="st('hv_single',-1)">−</button><span class="sv" id="d_hv_single">0</span><button class="sb" onclick="st('hv_single',1)">+</button><input type="hidden" id="hv_single" value="0"></div></div>
+    <div class="frow"><div class="flbl">Lightning Arrestor<span class="fsub">อุปกรณ์กันฟ้าผ่า/แรงดันเกินติดตั้งบนระบบแรงสูง ป้องกันหม้อแปลงและอุปกรณ์ปลายทางไม่ให้เสียหายจากฟ้าผ่า</span></div><div class="stpr"><button class="sb" onclick="st('hv_la',-1)">−</button><span class="sv" id="d_hv_la">0</span><button class="sb" onclick="st('hv_la',1)">+</button><input type="hidden" id="hv_la" value="0"></div></div>
+    <div class="frow"><div class="flbl">VCB Test<span class="fsub">ทดสอบเซอร์กิตเบรกเกอร์สูญญากาศ (Vacuum Circuit Breaker) — ตัวตัดวงจรหลักฝั่งแรงสูง นับเป็นตัว</span></div><div class="stpr"><button class="sb" onclick="st('hv_vcb',-1)">−</button><span class="sv" id="d_hv_vcb">0</span><button class="sb" onclick="st('hv_vcb',1)">+</button><input type="hidden" id="hv_vcb" value="0"></div></div>
+    <div class="frow"><div class="flbl">RMU<span class="fsub">ทดสอบตู้สวิตช์แรงสูงแบบ Ring Main Unit ใช้เชื่อมต่อสายป้อนในระบบจำหน่ายแบบวงแหวน นับเป็นชุด</span></div><div class="stpr"><button class="sb" onclick="st('hv_rmu',-1)">−</button><span class="sv" id="d_hv_rmu">0</span><button class="sb" onclick="st('hv_rmu',1)">+</button><input type="hidden" id="hv_rmu" value="0"></div></div>
+    <div class="frow"><div class="flbl">Protective Relay Test (HV)<span class="fsub">ทดสอบรีเลย์ป้องกันฝั่งแรงสูง ตรวจสอบว่ารีเลย์สั่งตัดวงจรได้ถูกต้องเมื่อเกิดไฟฟ้าลัดวงจร</span></div><div class="stpr"><button class="sb" onclick="st('hv_relay',-1)">−</button><span class="sv" id="d_hv_relay">0</span><button class="sb" onclick="st('hv_relay',1)">+</button><input type="hidden" id="hv_relay" value="0"></div></div>
+  </div>
+
+  <!-- TR -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-ico">🔵</span><span class="sec-lbl">หม้อแปลงไฟฟ้า (Transformer)</span></div>
+    <div id="tr_list"></div>
+    <div class="tr-add-row">
+      <select id="tr_kva_new" class="mini-select tr-kva-select" onchange="renderTRPickerPrice()"></select>
+      <select id="tr_type_new" class="mini-select" onchange="renderTRPickerPrice()">
+        <option value="oil">Oil Type</option>
+        <option value="dry">Dry Type</option>
+      </select>
+      <button class="add-btn tr-add-btn" onclick="addTR()">+ เพิ่มหม้อแปลง</button>
+    </div>
+    <div class="tr-price-hint" id="tr_price_hint"></div>
+  </div>
+
+  <!-- MDB -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-ico">🟣</span><span class="sec-lbl">MDB / ACB / CAP / MCCB / Relay</span></div>
+    <div id="mdb_list"></div>
+    <button class="add-btn" onclick="addMDB()">+ เพิ่มตู้ MDB</button>
+    <div class="subdiv">
+      <div class="subdiv-lbl">อุปกรณ์/งานทดสอบในระบบ MDB</div>
+    <div class="frow"><div class="flbl">ACB Test<span class="fsub">ทดสอบเซอร์กิตเบรกเกอร์ตัวหลักขนาดใหญ่ (Air Circuit Breaker) ในตู้ MDB นับเป็นตัว</span></div><div class="stpr"><button class="sb" onclick="st('v_acb',-1)">−</button><span class="sv" id="d_v_acb">0</span><button class="sb" onclick="st('v_acb',1)">+</button><input type="hidden" id="v_acb" value="0"></div></div>
+    <div class="frow"><div class="flbl">Capacitor Bank Test<span class="fsub">ทดสอบชุดคาปาซิเตอร์แก้ค่า Power Factor (ลดค่าปรับ kVAR จากการไฟฟ้า) นับเป็นชุด</span></div><div class="stpr"><button class="sb" onclick="st('v_cap',-1)">−</button><span class="sv" id="d_v_cap">0</span><button class="sb" onclick="st('v_cap',1)">+</button><input type="hidden" id="v_cap" value="0"></div></div>
+    <div class="frow"><div class="flbl">MCCB Test<span class="fsub">ทดสอบเบรกเกอร์ลูกย่อยขนาดเล็ก-กลาง (Molded Case Circuit Breaker) แยกออกจากวงจรย่อย นับเป็นตัว</span></div><div class="stpr"><button class="sb" onclick="st('v_mccb',-1)">−</button><span class="sv" id="d_v_mccb">0</span><button class="sb" onclick="st('v_mccb',1)">+</button><input type="hidden" id="v_mccb" value="0"></div></div>
+    <div class="frow"><div class="flbl">Relay Test<span class="fsub">ทดสอบรีเลย์ป้องกันกระแสเกิน/ลัดวงจรที่ติดตั้งในตู้ MDB นับเป็นชุด</span></div><div class="stpr"><button class="sb" onclick="st('v_relay',-1)">−</button><span class="sv" id="d_v_relay">0</span><button class="sb" onclick="st('v_relay',1)">+</button><input type="hidden" id="v_relay" value="0"></div></div>
+    </div>
+  </div>
+
+  <!-- DB -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-ico">🟢</span><span class="sec-lbl">DB / Load Panel</span></div>
+    <div class="frow"><div class="flbl">DB (Distribution Board)<span class="fsub">ตู้แยกวงจรย่อยทั่วไป ขนาดกลาง-ใหญ่ มักติดตั้งตามชั้น/โซนของอาคาร นับเป็นตู้</span></div><div class="stpr"><button class="sb" onclick="st('v_db',-1)">−</button><span class="sv" id="d_v_db">0</span><button class="sb" onclick="st('v_db',1)">+</button><input type="hidden" id="v_db" value="0"></div></div>
+    <div class="frow"><div class="flbl">Load Panel / Consumer Unit<span class="fsub">ตู้ไฟฟ้าย่อยขนาดเล็กแบบติดผนัง — ต่างจาก DB ตรงที่มีจำนวนเซอร์กิตน้อยกว่าและขนาดเล็กกว่ามาก นับเป็นแผง</span></div><div class="stpr"><button class="sb" onclick="st('v_lp',-1)">−</button><span class="sv" id="d_v_lp">0</span><button class="sb" onclick="st('v_lp',1)">+</button><input type="hidden" id="v_lp" value="0"></div></div>
+  </div>
+
+  <!-- GROUNDING -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-ico">🟤</span><span class="sec-lbl">Grounding Resistance Test</span></div>
+    <div class="trow">
+      <div class="tgl" id="t_gnd_auto" onclick="tog('t_gnd_auto')"></div>
+      <div class="tlbl">Auto จำนวนจุด = จำนวนหม้อแปลง + จำนวนตู้ MDB<span class="fsub">ระบบจะนับอัตโนมัติจาก TR + MDB ที่เพิ่มไว้</span></div>
+      <span class="sv" id="gnd_auto_qty">0 จุด</span>
+    </div>
+  </div>
+
+  <!-- THERMO -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-ico">🌡️</span><span class="sec-lbl">Infrared Thermo Scan</span></div>
+    <div class="trow">
+      <div class="tgl" id="t_thermo" onclick="tog('t_thermo')"></div>
+      <div class="tlbl">Thermoscan
+        <span class="tgl-qty" id="thermo_qty" style="display:none">
+          <button class="sb" onclick="st('v_thermo',-1)">−</button><span class="sv" id="d_v_thermo">1</span><button class="sb" onclick="st('v_thermo',1)">+</button><input type="hidden" id="v_thermo" value="1">
+          <span style="font-size:.7rem;color:var(--mut)">ครั้ง</span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENDORSEMENT -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-ico">📄</span><span class="sec-lbl">เอกสารรับรอง (Endorsement)</span></div>
+    <div class="trow"><div class="tgl" id="t_labour" onclick="tog('t_labour')"></div><div class="tlbl">กรมสวัสดิการและคุ้มครองแรงงาน<span class="fsub">เอกสารรับรองระบบไฟฟ้า กระทรวงแรงงาน — 15,000฿/ชุด</span></div></div>
+    <div class="trow"><div class="tgl" id="t_indus" onclick="tog('t_indus')"></div><div class="tlbl">สำนักเทคโนโลยีความปลอดภัย<span class="fsub">เอกสารรับรองความปลอดภัย กรมโรงงานอุตสาหกรรม — 15,000฿/ชุด</span></div></div>
+  </div>
+
+  <!-- LIGHTNING -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-ico">⚡</span><span class="sec-lbl">Lightning Protection System</span></div>
+    <div class="frow"><div class="flbl">ESE Lightning Protection<span class="fsub">ระบบป้องกันฟ้าผ่าแบบกระจายประจุล่วงหน้า (Early Streamer Emission) — ติดตั้งหัวล่อฟ้าบนเสาสูงสุดของอาคารพร้อมสายล่อลงดิน นับเป็นชุด</span></div><div class="stpr"><button class="sb" onclick="st('v_light',-1)">−</button><span class="sv" id="d_v_light">0</span><button class="sb" onclick="st('v_light',1)">+</button><input type="hidden" id="v_light" value="0"></div></div>
+  </div>
+
+  <!-- SITE EXPENSE -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-ico">🚗</span><span class="sec-lbl">Site Expense &amp; Transportation</span></div>
+
+    <div class="site-row">
+      <div class="site-row-head"><span class="site-row-lbl">โซนปลายทาง</span></div>
+      <div class="site-row-desc">เลือกโซนเพื่อกำหนดค่าเดินทางขั้นต่ำ กอล์ฟจะรีวิวราคาอีกครั้งก่อนส่งลูกค้า</div>
+      <select id="m_zone" class="mini-select" onchange="render()">
+        <option value="0">เลือกโซน...</option>
+        <option value="4000">กรุงเทพฯ / ปริมณฑล — ขั้นต่ำ 4,000฿</option>
+        <option value="8000">ชลบุรี — ขั้นต่ำ 8,000฿</option>
+        <option value="10000">ระยอง (ใกล้) — ขั้นต่ำ 10,000฿</option>
+        <option value="12000">ระยอง (ไกล) / ต่างจังหวัดอื่นๆ — ขั้นต่ำ 12,000฿</option>
+        <option value="custom">กำหนดขั้นต่ำเอง...</option>
+      </select>
+      <input type="number" id="m_zone_custom" value="0" min="0" class="site-inp" placeholder="ขั้นต่ำที่กำหนดเอง (฿)" style="display:none;margin-top:6px" oninput="render()">
+    </div>
+
+    <div class="subdiv">
+      <div class="subdiv-lbl">รายการ Case by Case — กอล์ฟใส่ราคาก่อนส่งลูกค้า</div>
+      <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:7px;padding:9px 12px;margin-bottom:12px;font-size:.78rem;color:#92600A;line-height:1.65">
+        ⚠ รายการด้านล่างราคาขึ้นกับแต่ละงาน — ติ๊กรายการที่ใช้ไว้ก่อน แล้วให้กอล์ฟกรอกราคาจริงในใบเสนอราคาก่อนส่งลูกค้า
+      </div>
+      <div class="trow"><div class="tgl" id="t_safety" onclick="tog('t_safety')"></div><div class="tlbl">Safety Training &amp; PPE<span class="fsub">อบรมความปลอดภัยก่อนเข้าพื้นที่ + PPE ที่ลูกค้ากำหนด — ราคาตาม Case</span></div></div>
+      <div class="trow"><div class="tgl" id="t_gen" onclick="tog('t_gen')"></div><div class="tlbl">Generator &amp; Fuel<span class="fsub">เช่าเครื่องปั่นไฟ + น้ำมัน กรณีดับไฟทั้งระบบ — ราคาตาม Case</span></div></div>
+      <div class="trow"><div class="tgl" id="t_lift" onclick="tog('t_lift')"></div><div class="tlbl">Boom Lift / X-Lift<span class="fsub">เช่ารถกระเช้าหรือนั่งร้าน สำหรับงานสูง เช่น HV/TR — ราคาตาม Case</span></div></div>
+      <div class="trow"><div class="tgl" id="t_extraday" onclick="tog('t_extraday')"></div><div class="tlbl">Extra Work Day<span class="fsub">ค่าแรงเพิ่ม กรณีงานเกิน 1 วันตามแผน — ราคาตาม Case</span></div></div>
+      <div class="trow"><div class="tgl" id="t_overnight" onclick="tog('t_overnight')"></div><div class="tlbl">ค้างคืน (ที่พัก + เบี้ยเลี้ยง)<span class="fsub">กรณีไซต์งานไกล ต้องพักค้างคืน — ราคาตาม Case</span></div></div>
+    </div>
+  </div>
+
+  <!-- FIRE PUMP -->
+  <div class="sec">
+    <div class="sec-hd"><span class="sec-ico">🔥</span><span class="sec-lbl">PM Fire Pump</span><span class="sec-sub">RFQ + Markup Mode</span></div>
+    <div class="rfq-note">⚠ ราคา Fire Pump ขึ้นกับ Supplier — กรอกข้อมูลเพื่อเตรียม RFQ ส่งซัพ แล้วใส่ราคาต้นทุนที่ได้กลับมาเพื่อให้ระบบคำนวณราคาขายให้อัตโนมัติ</div>
+    <div class="trow"><div class="tgl" id="t_fp" onclick="tog('t_fp')"></div><div class="tlbl">มีงาน PM Fire Pump ในโครงการนี้</div></div>
+    <div id="fp_detail" style="display:none;margin-top:8px">
+      <div class="frow"><div class="flbl">Main Pump</div><div class="stpr"><button class="sb" onclick="st('v_fpm',-1)">−</button><span class="sv" id="d_v_fpm">0</span><button class="sb" onclick="st('v_fpm',1)">+</button><input type="hidden" id="v_fpm" value="0"></div></div>
+      <div class="frow"><div class="flbl">Jockey Pump</div><div class="stpr"><button class="sb" onclick="st('v_fpj',-1)">−</button><span class="sv" id="d_v_fpj">0</span><button class="sb" onclick="st('v_fpj',1)">+</button><input type="hidden" id="v_fpj" value="0"></div></div>
+      <div class="frow"><div class="flbl">Diesel Pump</div><div class="stpr"><button class="sb" onclick="st('v_fpd',-1)">−</button><span class="sv" id="d_v_fpd">0</span><button class="sb" onclick="st('v_fpd',1)">+</button><input type="hidden" id="v_fpd" value="0"></div></div>
+      <div class="trow"><div class="tgl" id="t_fpflow" onclick="tog('t_fpflow')"></div><div class="tlbl">Flow / Pressure Test</div></div>
+      <div class="trow"><div class="tgl" id="t_fprep" onclick="tog('t_fprep')"></div><div class="tlbl">Report Required</div></div>
+      <div class="site-row" style="margin-top:8px">
+        <div class="site-row-lbl">ราคาต้นทุนจาก Supplier (Cost)<span class="manual-badge">กรอกหลังได้ RFQ กลับ</span></div>
+        <div class="site-row-desc">เมื่อได้ราคาต้นทุนจาก Supplier แล้ว ใส่ที่นี่ ระบบจะคำนวณราคาขาย = ต้นทุน + Markup 20% + Coordination 5% + Contingency 5%</div>
+        <input type="number" id="v_fp_cost" value="" min="0" class="site-inp" placeholder="฿0 — ยังไม่ได้ราคาจาก Supplier" oninput="render()">
+      </div>
+      <div id="fp_calc_box"></div>
+      <button class="add-btn" style="margin-top:6px" onclick="genRFQ()">📋 สร้าง RFQ Package</button>
+    </div>
+  </div>
+
+</div><!-- end left -->
+
+<!-- ═══ RIGHT ═══ -->
+<div id="right">
+  <div class="out-tabs">
+    <div class="otab on" onclick="swTab('boq',this)">BOQ Internal</div>
+    <div class="otab" onclick="swTab('qt',this)">QT ลูกค้า</div>
+    <div class="otab" onclick="swTab('scope',this)">Scope of Work</div>
+    <div class="otab" onclick="swTab('prequote',this)">Pre-Quotation</div>
+    <div class="otab" onclick="swTab('myqt',this)">📁 My QT</div>
+  </div>
+  <div id="out-content"></div>
+</div>
+</div><!-- end wrap -->
+
+<div id="toast"></div>
+
+<script>
+const TR_PX={30:2500,50:2500,75:2500,100:3000,250:3500,315:4000,400:4000,500:4000,630:4500,750:4500,800:4500,1000:4500,1250:5000,1500:5000,1600:5000,2000:6000,2500:7000,3000:7500};
+const TR_KVA=[30,50,75,100,250,315,400,500,630,750,800,1000,1250,1500,1600,2000,2500,3000];
+const TR_ADDON_DEFS={
+  dry:[
+    {key:'wrt',n:'Winding Resistance Test',u:'ลูก',p:3500},
+    {key:'vtr',n:'Voltage Turns Ratio Test',u:'ลูก',p:3500},
+  ],
+  oil:[
+    {key:'sil',n:'Silica Gel',u:'Set',p:800},
+    {key:'wrt',n:'Winding Resistance Test',u:'ลูก',p:3500},
+    {key:'vtr',n:'Voltage Turns Ratio Test',u:'ลูก',p:3500},
+    {key:'dga',n:'Dissolved gas analysis: DGA (ASTM D33000)',u:'ลูก',p:6500},
+    {key:'color',n:'Color number (ASTM D1500)',u:'ลูก',p:1000},
+    {key:'ift',n:'Interfacial tension (ASTM D971)',u:'ลูก',p:1000},
+    {key:'acid',n:'Acidility (ASTM D664-04)',u:'ลูก',p:1000},
+    {key:'furan',n:'Furan analysis By HPLC (ASTM D971)',u:'ลูก',p:3500},
+    {key:'moisture',n:'Moisture Content (Water content) (ASTM D1533)',u:'ลูก',p:1800},
+    {key:'pf25',n:'Power factor at 50 Hz. 25 C',u:'ลูก',p:1800},
+    {key:'pf100',n:'Power factor at 50 Hz. 100 C',u:'ลูก',p:1800},
+    {key:'dielectric',n:'Dielectric Breakdown Voltage (ASTM D877, 1816 IEC 60156)',u:'ลูก',p:1500},
+    {key:'oil',n:'New Mineral Oil Change',u:'ลิตร',p:100,qtyField:'oilLiters'},
+    {key:'purify',n:'Mineral Oil Purifier',u:'ลิตร',p:8,qtyField:'purifyLiters'},
+  ],
+};
+const TR_ADDON_KEYS=[...new Set([...TR_ADDON_DEFS.dry,...TR_ADDON_DEFS.oil].map(x=>x.key))];
+const SCOPE_SUMMARY_DB=[
+  {
+    code:"HV_SYSTEM",
+    order:1,
+    title:"High Voltage System",
+    trigger:"hv_pair + hv_single + hv_la + hv_vcb + hv_rmu + hv_relay > 0",
+    risk_hook:"ระบบแรงสูงคือด่านแรกของโรงงาน ถ้าจุดนี้มีปัญหา ทั้งไลน์ผลิตอาจหยุดทันที",
+    body:"ระบบไฟฟ้าแรงสูงเป็นจุดรับไฟหลักของโรงงานและเป็นจุดที่มีผลกระทบสูงที่สุดต่อความต่อเนื่องในการผลิต หากอุปกรณ์แรงสูง เช่น ชุดคัตเอาท์ ฟิวส์ ลูกถ้วย Lightning Arrestor, VCB, RMU หรือ Protective Relay เกิดความผิดปกติ โรงงานอาจไม่ได้เสียหายแค่เฉพาะอุปกรณ์ แต่เสี่ยงต่อไฟดับทั้งระบบ เครื่องจักรหยุดผลิต และเกิดอันตรายต่อบุคลากรหน้างาน การตรวจสอบของ CKS มุ่งเน้นการประเมินสภาพอุปกรณ์ ทำความสะอาดจุดฉนวน ตรวจความแน่นของจุดต่อ ทดสอบค่าฉนวน และตรวจการทำงานของอุปกรณ์ตัดตอนและระบบป้องกัน เพื่อให้ลูกค้ารู้ก่อนว่าระบบแรงสูงยังปลอดภัย พร้อมใช้งาน หรือมีจุดใดที่ควรแก้ไขก่อนเกิดความเสียหายจริง",
+    customer_visible:true,
+    exclude_from_price:true
+  },
+  {
+    code:"TRANSFORMER_SYSTEM",
+    order:2,
+    title:"Transformer System",
+    trigger:"trList.length > 0",
+    risk_hook:"หม้อแปลงคือหัวใจของระบบไฟฟ้า ถ้าหม้อแปลงเสีย โรงงานไม่ได้แค่ดับ แต่ค่าเสียหายอาจบานปลาย",
+    body:"หม้อแปลงไฟฟ้าเป็นอุปกรณ์หลักที่รับพลังงานจากระบบแรงสูงและจ่ายต่อไปยังระบบไฟฟ้าทั้งโรงงาน ความผิดปกติของหม้อแปลงมักเริ่มจากสิ่งที่มองไม่เห็น เช่น ฉนวนเสื่อม ความชื้นสะสม น้ำมันเสื่อมสภาพ จุดต่อหลวม หรือค่าทางไฟฟ้าที่เริ่มเบี่ยงเบน หากปล่อยไว้นานอาจนำไปสู่ความร้อนสะสม การลัดวงจร หรือความเสียหายรุนแรงที่ต้องหยุดระบบเพื่อซ่อม บริการ PM Transformer ของ CKS จึงไม่ได้เป็นเพียงการทำความสะอาดหม้อแปลง แต่เป็นการประเมินสุขภาพของหม้อแปลงทั้งภายนอกและภายใน เพื่อให้ลูกค้ารู้สภาพจริงของหม้อแปลงก่อนเกิดเหตุไม่คาดคิด",
+    customer_visible:true,
+    exclude_from_price:true
+  },
+  {
+    code:"MDB_PROTECTION_SYSTEM",
+    order:3,
+    title:"Main Distribution Board & Protection System",
+    trigger:"mdbList.length > 0 || v_acb + v_cap + v_mccb + v_relay > 0",
+    risk_hook:"MDB คือศูนย์กลางการจ่ายไฟของโรงงาน จุดต่อหลวมเพียงจุดเดียว อาจกลายเป็นความร้อนสะสมและไฟไหม้ได้",
+    body:"ตู้ MDB เป็นจุดรวมและกระจายพลังงานไฟฟ้าหลักไปยังระบบต่าง ๆ ของโรงงาน ความผิดปกติในตู้ MDB เช่น Busbar หลวม ฝุ่นสะสม ฉนวนเสื่อม จุดต่อร้อน เบรกเกอร์ทำงานผิดปกติ หรือระบบป้องกันไม่ตอบสนอง อาจส่งผลโดยตรงต่อความปลอดภัยของระบบไฟฟ้าและความต่อเนื่องของกระบวนการผลิต การตรวจสอบของ CKS ครอบคลุมการประเมินตู้ MDB และอุปกรณ์ป้องกันที่เกี่ยวข้อง เช่น ACB, MCCB, Protective Relay และ Capacitor Bank เพื่อให้ลูกค้าทราบว่าระบบจ่ายไฟหลักยังอยู่ในสภาพปลอดภัย หรือมีจุดใดที่ควรแก้ไขก่อนเกิดเหตุไฟฟ้าขัดข้องหรือความเสียหายรุนแรง",
+    customer_visible:true,
+    exclude_from_price:true
+  },
+  {
+    code:"DB_LOAD_PANEL",
+    order:4,
+    title:"DB / Load Panel System",
+    trigger:"v_db + v_lp > 0",
+    risk_hook:"ปัญหาไฟฟ้าหลายครั้งไม่ได้เริ่มที่ตู้ใหญ่ แต่เริ่มจากตู้ย่อยที่ถูกมองข้าม",
+    body:"ตู้ DB, Load Panel และ Consumer Unit เป็นจุดกระจายไฟไปยังโหลดและพื้นที่ใช้งานจริงของโรงงาน แม้จะไม่ใช่ตู้หลัก แต่หากมีฝุ่นสะสม จุดต่อหลวม โหลดไม่สมดุล เบรกเกอร์เสื่อม หรือมีความร้อนสะสม อาจกลายเป็นต้นเหตุของไฟฟ้าขัดข้อง อุปกรณ์เสียหาย หรือความเสี่ยงด้านความปลอดภัยของผู้ใช้งาน การตรวจสอบของ CKS ช่วยให้ลูกค้าควบคุมความเสี่ยงในระบบไฟฟ้าย่อย ไม่ปล่อยให้ปัญหาเล็กสะสมจนกลายเป็นความเสียหายใหญ่",
+    customer_visible:true,
+    exclude_from_price:true
+  },
+  {
+    code:"GROUNDING_TEST",
+    order:5,
+    title:"Grounding Resistance Test",
+    trigger:"t_gnd_auto === true",
+    risk_hook:"ระบบกราวด์คือแนวป้องกันสุดท้าย ถ้ากราวด์ไม่ดี ความเสียหายอาจย้อนกลับเข้าคนและอุปกรณ์",
+    body:"ระบบสายดินมีหน้าที่ระบายกระแสผิดปกติ ไฟรั่ว และแรงดันเกินออกจากระบบ หากค่าความต้านทานดินสูงเกินไป หรือระบบกราวด์เสื่อมสภาพ อาจเพิ่มความเสี่ยงต่อไฟฟ้าช็อต อุปกรณ์เสียหาย ระบบป้องกันทำงานผิดพลาด และเกิดอันตรายต่อบุคลากรหน้างาน บริการ Grounding Resistance Test ของ CKS ช่วยตรวจวัดค่าความต้านทานดินในจุดสำคัญ เช่น หม้อแปลง ตู้ MDB และระบบป้องกันฟ้าผ่า พร้อมจัดทำรายงานผลการวัด เพื่อให้ลูกค้ามีข้อมูลชัดเจนว่าสายดินยังทำหน้าที่ได้เหมาะสมหรือควรวางแผนปรับปรุง",
+    customer_visible:true,
+    exclude_from_price:true
+  },
+  {
+    code:"THERMOSCAN",
+    order:6,
+    title:"Infrared Thermo Scan",
+    trigger:"t_thermo === true",
+    risk_hook:"ความร้อนคือสัญญาณเตือนก่อนความเสียหาย แต่ตาเปล่ามองไม่เห็น",
+    body:"ปัญหาไฟฟ้าหลายอย่างเริ่มจากความร้อนสะสม เช่น จุดต่อหลวม หน้าสัมผัสเสื่อม โหลดเกิน หรืออุปกรณ์ภายในเริ่มผิดปกติ ซึ่งมักไม่สามารถมองเห็นได้ด้วยตาเปล่า หากปล่อยไว้นาน ความร้อนเหล่านี้อาจพัฒนาเป็นอุปกรณ์เสียหาย ไฟฟ้าขัดข้อง หรือเหตุไฟไหม้ในตู้ไฟฟ้า บริการ Infrared Thermo Scan ของ CKS ใช้กล้องถ่ายภาพความร้อนตรวจจุดเสี่ยงในระบบไฟฟ้าขณะใช้งานจริง พร้อมจัดทำรายงานภาพถ่ายความร้อนและระบุจุดที่ควรเฝ้าระวังหรือแก้ไข",
+    customer_visible:true,
+    exclude_from_price:true
+  },
+  {
+    code:"LIGHTNING_PROTECTION",
+    order:7,
+    title:"Lightning Protection System",
+    trigger:"v_light > 0",
+    risk_hook:"ฟ้าผ่าไม่ได้ทำลายแค่หลังคา แต่มันสามารถทำลายระบบไฟฟ้า เครื่องจักร PLC และอุปกรณ์ควบคุมทั้งโรงงาน",
+    body:"ระบบป้องกันฟ้าผ่ามีหน้าที่รับและนำกระแสฟ้าผ่าลงสู่ดินอย่างปลอดภัย หากหัวล่อฟ้า สายตัวนำลงดิน จุดต่อ หรือระบบกราวด์เสื่อมสภาพ อาจทำให้แรงดันเกินย้อนเข้าสู่อุปกรณ์ไฟฟ้า เครื่องจักร ระบบควบคุม หรืออุปกรณ์อิเล็กทรอนิกส์ที่มีมูลค่าสูง บริการตรวจสอบ Lightning Protection System ของ CKS ครอบคลุมการตรวจสภาพ Air Terminal, Mast, Down Conductor, Lightning Strike Counter และค่าความต้านทานดิน เพื่อช่วยให้ลูกค้ามั่นใจว่าระบบป้องกันฟ้าผ่ายังอยู่ในสภาพพร้อมทำงานเมื่อเกิดเหตุจริง",
+    customer_visible:true,
+    exclude_from_price:true
+  },
+  {
+    code:"FIRE_PUMP_SYSTEM",
+    order:8,
+    title:"Fire Pump System",
+    trigger:"t_fp === true",
+    risk_hook:"Fire Pump ไม่ได้ทำงานทุกวัน แต่วันที่ต้องใช้ มันต้องติดทันที ไม่มีโอกาสให้แก้ตัวครั้งที่สอง",
+    body:"ระบบ Fire Pump เป็นหัวใจสำคัญของระบบดับเพลิงในโรงงาน แม้จะไม่ได้ใช้งานประจำวัน แต่หากเกิดเหตุเพลิงไหม้แล้ว Main Pump, Jockey Pump, Diesel Pump, Pressure System หรือ Control Panel ไม่ทำงาน ความเสียหายอาจลุกลามรวดเร็วและกระทบต่อชีวิต ทรัพย์สิน การผลิต และความต่อเนื่องของธุรกิจ บริการ PM Fire Pump ของ CKS ครอบคลุมการตรวจสภาพทั่วไป ทดสอบการทำงาน Auto/Manual Start ตรวจ Flow และ Pressure ตามขอบเขตที่เลือก ตรวจ Alarm และ Trip Function รวมถึงบันทึกผลเป็นรายงาน เพื่อให้ลูกค้าทราบว่าระบบดับเพลิงมีความพร้อมในวันที่จำเป็นต้องใช้งานจริง",
+    customer_visible:true,
+    exclude_from_price:true
+  },
+  {
+    code:"ENGINEERING_REPORT_ENDORSEMENT",
+    order:9,
+    title:"Engineering Report & Endorsement",
+    trigger:"t_labour === true || t_indus === true",
+    risk_hook:"รายงานที่ดีไม่ใช่แค่เอกสารสรุปงาน แต่ต้องใช้ยืนยันความพร้อมของระบบต่อผู้บริหารและหน่วยงานตรวจสอบได้",
+    body:"สำหรับโรงงานอุตสาหกรรม งานตรวจสอบระบบไฟฟ้าไม่ได้จบแค่การ PM หน้างาน แต่ต้องมีเอกสารรายงานที่ถูกต้อง ชัดเจน และสามารถใช้อ้างอิงต่อหน่วยงานภายใน ลูกค้า ผู้ตรวจสอบ หรือหน่วยงานราชการที่เกี่ยวข้องได้ หากเอกสารไม่ครบหรือไม่มีผู้มีคุณวุฒิรับรอง อาจทำให้ลูกค้าต้องเสียเวลาแก้เอกสารย้อนหลัง หรือขาดหลักฐานสำคัญเมื่อมีการตรวจสอบ CKS ให้บริการจัดทำเอกสารรายงานและเอกสารรับรองโดยวิศวกรไฟฟ้าที่ได้รับใบอนุญาต เพื่อช่วยให้ลูกค้ามีเอกสารประกอบการบริหารความปลอดภัยและการตรวจสอบอย่างมืออาชีพ",
+    customer_visible:true,
+    exclude_from_price:true
+  }
+];
+const RATE=15, MIN_TRANS=5000;
+let trList=[];
+let mdbList=[];
+let curTab='boq';
+const LOGO_B64=`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`;
+const STAMP_B64=`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`;
+
+const $=id=>document.getElementById(id);
+const gn=id=>Math.max(0,parseInt($(id)?.value||0)||0);
+const on=id=>$(id)?.classList.contains('on');
+const fmt=n=>n>0?n.toLocaleString('th-TH'):'—';
+const today=()=>new Date().toLocaleDateString('th-TH',{day:'2-digit',month:'long',year:'numeric'});
+const META_FIELDS=[
+  ['mc','ชื่อลูกค้า'],
+  ['mphone','เบอร์โทรลูกค้า'],
+  ['memail','Email ลูกค้า'],
+  ['ms','สถานที่ / โรงงาน'],
+  ['mp','โครงการ / Project'],
+  ['mdate','วันเข้า Site Survey'],
+  ['mexp','วันหมดอายุใบเสนอราคา'],
+  ['missuer','ชื่อผู้ออกใบเสนอราคา'],
+];
+
+function esc(s){
+  return String(s||'').replace(/[&<>"']/g,m=>({
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#039;'
+  }[m]));
+}
+
+function getScopeSummaryItems(d){
+  const items=[];
+  const hvQty=gn('hv_pair')+gn('hv_single')+gn('hv_la')+gn('hv_vcb')+gn('hv_rmu')+gn('hv_relay');
+  const mdbQty=(Array.isArray(mdbList)?mdbList.length:0)+gn('v_acb')+gn('v_cap')+gn('v_mccb')+gn('v_relay');
+  const dbQty=gn('v_db')+gn('v_lp');
+  const has={
+    HV_SYSTEM:hvQty>0,
+    TRANSFORMER_SYSTEM:Array.isArray(trList)&&trList.length>0,
+    MDB_PROTECTION_SYSTEM:mdbQty>0,
+    DB_LOAD_PANEL:dbQty>0,
+    GROUNDING_TEST:on('t_gnd_auto'),
+    THERMOSCAN:on('t_thermo'),
+    LIGHTNING_PROTECTION:gn('v_light')>0,
+    FIRE_PUMP_SYSTEM:on('t_fp'),
+    ENGINEERING_REPORT_ENDORSEMENT:on('t_labour')||on('t_indus')
+  };
+  SCOPE_SUMMARY_DB
+    .filter(x=>x.customer_visible&&has[x.code])
+    .sort((a,b)=>a.order-b.order)
+    .forEach(x=>items.push(x));
+  return items;
+}
+
+function validateMeta(){
+  const missing=[];
+  META_FIELDS.forEach(([id,lbl])=>{
+    const el=$(id);
+    if(!el)return;
+    const bad=!String(el.value||'').trim() || (el.type==='email'&&!el.checkValidity());
+    el.classList.toggle('required-missing',bad);
+    if(bad)missing.push(lbl);
+  });
+  if(missing.length){
+    alert('กรุณากรอกข้อมูลงานให้ครบ: '+missing.join(', '));
+    const first=META_FIELDS.map(([id])=>$(id)).find(el=>el&&el.classList.contains('required-missing'));
+    if(first)first.focus();
+    return false;
+  }
+  return true;
+}
+
+function st(id,d){
+  const el=$(id); if(!el)return;
+  const v=Math.max(0,gn(id)+d); el.value=v;
+  const dp=$('d_'+id); if(dp)dp.textContent=v;
+  render();
+}
+
+function tog(id){
+  $(id)?.classList.toggle('on');
+  const on_=on(id);
+  if(id==='t_fp') $('fp_detail').style.display=on_?'block':'none';
+  if(id==='t_thermo') $('thermo_qty').style.display=on_?'inline-flex':'none';
+  render();
+}
+
+function zoneMin(){
+  const z=$('m_zone')?.value;
+  $('m_zone_custom').style.display=z==='custom'?'block':'none';
+  if(z==='custom') return Math.max(0,parseInt($('m_zone_custom')?.value||0)||0);
+  return parseInt(z||0)||0;
+}
+function zoneLabel(){
+  const sel=$('m_zone');
+  if(!sel)return '';
+  if(sel.value==='custom')return 'กำหนดเอง';
+  return sel.options[sel.selectedIndex]?.textContent?.replace(/—.*$/,'').trim()||'';
+}
+
+function trPriceLabel(kva){
+  const p=TR_PX[kva]||0;
+  return p?p.toLocaleString('th-TH')+'฿/ลูก':'ไม่มีราคา';
+}
+function newTRAddons(){
+  return Object.fromEntries(TR_ADDON_KEYS.map(k=>[k,false]));
+}
+function normalizeTR(t){
+  t.kva=+t.kva||500;
+  t.type=t.type==='dry'?'dry':'oil';
+  t.addons={...newTRAddons(),...(t.addons||{})};
+  t.oilLiters=Math.max(0,parseInt(t.oilLiters||0)||0);
+  t.purifyLiters=Math.max(0,parseInt(t.purifyLiters||0)||0);
+  return t;
+}
+function buildTRPicker(){
+  const sel=$('tr_kva_new');
+  if(!sel)return;
+  const cur=sel.value||'500';
+  sel.innerHTML=TR_KVA.map(k=>`<option value="${k}" ${String(k)===cur?'selected':''}>${k} kVA — ${trPriceLabel(k)}</option>`).join('');
+  if(!sel.value)sel.value='500';
+  renderTRPickerPrice();
+}
+function renderTRPickerPrice(){
+  const sel=$('tr_kva_new'),hint=$('tr_price_hint');
+  if(!sel||!hint)return;
+  const kva=+sel.value||500;
+  const type=$('tr_type_new')?.value==='dry'?'Dry Type':'Oil Type';
+  hint.textContent=`เพิ่ม ${type} — ราคา PM Transformer ${kva} kVA: ${trPriceLabel(kva)}`;
+}
+function addTR(){
+  const kva=+($('tr_kva_new')?.value||500);
+  const type=$('tr_type_new')?.value==='dry'?'dry':'oil';
+  trList.push({kva,type,addons:newTRAddons(),oilLiters:0,purifyLiters:0});
+  buildTR();
+  render();
+}
+function rmTR(i){trList.splice(i,1);buildTR();render();}
+function setTRType(i,type){
+  if(!trList[i])return;
+  trList[i].type=type==='dry'?'dry':'oil';
+  buildTR();
+  render();
+}
+function toggleTRAddon(i,key){
+  if(!trList[i])return;
+  normalizeTR(trList[i]);
+  trList[i].addons[key]=!trList[i].addons[key];
+  buildTR();
+  render();
+}
+function setTRAddonQty(i,field,value){
+  if(!trList[i])return;
+  trList[i][field]=Math.max(0,parseInt(value||0)||0);
+  render();
+}
+function buildTR(){
+  buildTRPicker();
+  $('tr_list').innerHTML=trList.map((t,i)=>`
+    ${(()=>{t=normalizeTR(t);const defs=TR_ADDON_DEFS[t.type];return `
+    <div class="asset-card">
+      <div class="asset-card-head">
+        <div>
+          <div class="asset-title">หม้อแปลง TR${i+1}</div>
+          <div class="asset-sub">${t.kva} kVA · ${t.type==='dry'?'Dry Type':'Oil Type'} · ${trPriceLabel(t.kva)}</div>
+        </div>
+        <button class="asset-remove" onclick="rmTR(${i})">×</button>
+      </div>
+      <div class="asset-grid">
+        <select class="mini-select" onchange="trList[${i}].kva=+this.value;buildTR();render()">
+          ${TR_KVA.map(k=>`<option value="${k}" ${k===t.kva?'selected':''}>${k} kVA</option>`).join('')}
+        </select>
+        <div class="seg">
+          <button class="seg-btn ${t.type==='dry'?'on':''}" onclick="setTRType(${i},'dry')">Dry Type</button>
+          <button class="seg-btn ${t.type==='oil'?'on':''}" onclick="setTRType(${i},'oil')">Oil Type</button>
+        </div>
+      </div>
+      <div class="addon-list">
+        ${defs.map(a=>`
+          <label class="addon-row">
+            <input type="checkbox" ${t.addons[a.key]?'checked':''} onchange="toggleTRAddon(${i},'${a.key}')">
+            <span>${a.n}</span>
+            <span class="addon-price">${a.p.toLocaleString('th-TH')}฿/${a.u}</span>
+            ${a.qtyField&&t.addons[a.key]?`<input class="addon-qty" type="number" min="0" value="${t[a.qtyField]||0}" oninput="setTRAddonQty(${i},'${a.qtyField}',this.value)">`:''}
+          </label>`).join('')}
+      </div>
+    </div>`})()}`).join('');
+}
+
+function addMDB(){mdbList.push({cols:1});buildMDB();render();}
+function rmMDB(i){mdbList.splice(i,1);buildMDB();render();}
+function setMDBCols(i,value){
+  if(!mdbList[i])return;
+  mdbList[i].cols=Math.max(1,parseInt(value||1)||1);
+  buildMDB();
+  render();
+}
+function buildMDB(){
+  const box=$('mdb_list');
+  if(!box)return;
+  box.innerHTML=mdbList.map((m,i)=>{
+    const cols=Math.max(1,parseInt(m.cols||1)||1);
+    return `<div class="asset-card">
+      <div class="asset-card-head">
+        <div>
+          <div class="asset-title">MDB${i+1}</div>
+          <div class="asset-sub">${(cols*2000).toLocaleString('th-TH')}฿/ตู้</div>
+        </div>
+        <button class="asset-remove" onclick="rmMDB(${i})">×</button>
+      </div>
+      <div class="mf">
+        <label>จำนวนคอลัมน์</label>
+        <input type="number" min="1" value="${cols}" oninput="setMDBCols(${i},this.value)">
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function compute(){
+  const secs=[];
+
+  // ── Scope of Work data (from PM_EE_PRICE_LIST_BY_RK_.xlsx) ──────────
+  const S={
+    hv_pair:['General & Visual Inspection','Cleaning Insulator & Retightening','Report After Inspection & Test'],
+    hv_single:['General & Visual Inspection','Cleaning Insulator & Retightening','Report After Inspection & Test'],
+    la:['General & Visual Inspection','Cleaning Insulator & Retightening','Insulation Resistance Test','Report After Inspection & Test'],
+    vcb:['Visual Inspection & Cleaning','Function Test (Closing & Opening Time)','Operation Tripping Test','Insulation Resistance Test','Contact Resistance Test','Retightening Bolt, Nut & Making','Report After Inspection & Test'],
+    relay_hv:['Visual Inspection & Cleaning','Function Test (Service Setting Only) & Operation Tripping Test','Retightening Bolt, Nut & Making','Report After Inspection & Test'],
+    rmu:['General & Visual Inspection','Body & Seal Check','Terminal Check & Retightening Bolt, Nut','Mechanism & Contact Condition Check','Arc Chute Condition Check','Grounding Check','Protective Relay Test & Trip Unit Function Test','Parameter Checking & Recording','Insulation Resistance Test','Contact Resistance Test','Operation & Function Test','Report After Inspection & Test'],
+    tr:['General & Visual Inspection','Cleaning & Retightening','Insulation Resistance Test','Retightening Bolt, Nut & Making','Report After Inspection & Test'],
+    sil:['Remove & Replace Silica Gel in Breather','Inspect Breather Seal & Oil Cup','Report After Inspection & Test'],
+    dga:['Dissolved Gas Analysis (ASTM D3300)','Collect Oil Sample & Send to Laboratory','Analyse Fault Gas Concentration','Report After Inspection & Test'],
+    wrt:['Winding Resistance Measurement (All Taps)','Compare with Nameplate & Previous Record','Report After Inspection & Test'],
+    vtr:['Voltage Turns Ratio Test (All Taps)','Compare with Nameplate Values','Report After Inspection & Test'],
+    dbv:['Dielectric Breakdown Voltage Test (ASTM D877/IEC 60156)','Collect Oil Sample','Report After Inspection & Test'],
+    oil:['Drain Existing Mineral Oil','Replace with New Mineral Oil','Purge & Refill Procedure','Report After Inspection & Test'],
+    purify:['Filter & Purify Existing Mineral Oil','Measure Dielectric Strength Before & After','Report After Inspection & Test'],
+    mdb:['General & Visual Inspection','Cleaning & Retightening','Insulation Resistance Test (Main Busbars only)','Retightening Bolt, Nut & Making','Report After Inspection & Test'],
+    acb:['General & Visual Inspection','Contact Resistance Test','Function Test, Trip Unit L,S,I,G (Service Setting Only)','Clean & Retightening','Lubricate Mechanism','Report After Inspection & Test'],
+    cap:['General & Visual Inspection','Cleaning & Retightening Bolt, Nut & Making','HRC Fuse & Magnetic Contactor Check','Power Factor Controller Function Check','Insulation Resistance Test','Capacitance Test','Report After Inspection & Test'],
+    mccb:['General & Visual Inspection','Contact Resistance Test','Clean & Retightening','Lubricate Mechanism','Report After Inspection & Test'],
+    relay_mdb:['Protective Relay Test & Trip Unit Function Test','Parameter Checking & Recording of Protective Relay','Report After Inspection & Test'],
+    contact:['Contact Resistance Measurement on Busbar Joints','Identify Hot Spots','Report After Inspection & Test'],
+    db:['General & Visual Inspection','Cleaning & Retightening','Retightening Bolt, Nut & Making','Report After Inspection & Test'],
+    lp:['General & Visual Inspection','Cleaning & Retightening','Retightening Bolt, Nut & Making','Report After Inspection & Test'],
+    gnd:['Grounding Resistance Test (3-Point Method)','Compare with Standard (≤5 Ω)','Report After Inspection & Test'],
+    thermo:['Infrared Thermoscan','Thermoscan Report with Photo Documentation'],
+    endorse:['ตรวจสอบและจัดทำเอกสารโดยวิศวกรไฟฟ้าที่ได้รับใบอนุญาต (PEE)','จัดทำรายงานผลการตรวจสอบตามแบบฟอร์มราชการ','Engineer Signed Report'],
+    lightning:['General & Visual Check','Air Terminal Test & Cleaning','Paint Coating (Mast/Support only)','Continuity Down Conductor Check','Lightning Strike Counter Check','Grounding Resistance Test','Report After Inspection & Test'],
+    fp:['General & Visual Inspection','Function Test (Auto/Manual Start)','Flow & Pressure Test (if selected)','Alarm & Trip Test','Lubrication Check','Report After Inspection & Test'],
+    pending:['รอกอล์ฟคอนเฟิร์ม scope'],
+  };
+
+  // HV
+  const hvItems=[];
+  const hp=gn('hv_pair'),hs=gn('hv_single'),hla=gn('hv_la');
+  const hvcb=gn('hv_vcb'),hrmu=gn('hv_rmu'),hrel=gn('hv_relay');
+  if(hp) hvItems.push({n:'ชุดอุปกรณ์แรงสูงเสาคู่ (Double Pole)',q:hp,u:'Set',p:6500,t:hp*6500,sow:S.hv_pair});
+  if(hs) hvItems.push({n:'ชุดอุปกรณ์แรงสูงเสาเดี่ยว (Single Pole)',q:hs,u:'Set',p:3500,t:hs*3500,sow:S.hv_single});
+  if(hla) hvItems.push({n:'Lightning Arrestor',q:hla,u:'Set',p:4500,t:hla*4500,sow:S.la});
+  if(hvcb) hvItems.push({n:'Vacuum Circuit Breaker (VCB) Test',q:hvcb,u:'Ea',p:6000,t:hvcb*6000,sow:S.vcb});
+  if(hrmu) hvItems.push({n:'Ring Main Unit (RMU)',q:hrmu,u:'Set',p:9500,t:hrmu*9500,sow:S.rmu});
+  if(hrel) hvItems.push({n:'Protective Relay Test (HV)',q:hrel,u:'Ea',p:3500,t:hrel*3500,sow:S.relay_hv});
+  if(hvItems.length) secs.push({lbl:'ระบบไฟฟ้าแรงสูง (High Voltage System)',qtLbl:'PM High Voltage System',items:hvItems,total:hvItems.reduce((s,x)=>s+x.t,0)});
+
+  // TR
+  const trItems=[];
+  trList.forEach((raw,i)=>{
+    const t=normalizeTR(raw);
+    const tag=`tr${i+1}`;
+    const p=TR_PX[t.kva]||0;
+    trItems.push({n:`(${tag}) PM Transformer ${t.kva} kVA (${t.type==='dry'?'Dry Type':'Oil Type'})`,q:1,u:'ลูก',p,t:p,sow:S.tr,warn:!p?'kVA ไม่มีใน price list':null});
+    (TR_ADDON_DEFS[t.type]||[]).forEach(def=>{
+      if(!t.addons[def.key])return;
+      const q=def.qtyField?Math.max(0,parseInt(t[def.qtyField]||0)||0):1;
+      if(!q)return;
+      trItems.push({n:`(${tag}) ${def.n}`,q,u:def.u,p:def.p,t:q*def.p,sow:S.pending});
+    });
+  });
+  if(trItems.length) secs.push({lbl:'หม้อแปลงไฟฟ้า (Transformer)',qtLbl:'PM Transformer System',items:trItems,total:trItems.reduce((s,x)=>s+x.t,0)});
+
+  // MDB
+  const mdbItems=[];
+  const mdbTotalCols=mdbList.reduce((s,m)=>s+(Math.max(1,parseInt(m.cols||1)||1)),0);
+  mdbList.forEach((m,i)=>{
+    const cols=Math.max(1,parseInt(m.cols||1)||1);
+    const total=cols*2000;
+    mdbItems.push({n:`(mdb${i+1}) MDB`,q:1,u:'ตู้',p:total,t:total,sow:S.mdb,warn:cols>30?'Column จำนวนมาก — ตรวจเวลา':null});
+  });
+  const acb=gn('v_acb'),cap=gn('v_cap'),mccb=gn('v_mccb'),relay=gn('v_relay');
+  if(acb) mdbItems.push({n:'Air Circuit Breaker (ACB) Test',q:acb,u:'Ea',p:5500,t:acb*5500,sow:S.acb});
+  if(cap) mdbItems.push({n:'Capacitor Bank Panel Test',q:cap,u:'Set',p:4500,t:cap*4500,sow:S.cap});
+  if(mccb) mdbItems.push({n:'Molded Case Circuit Breaker (MCCB) Test',q:mccb,u:'Ea',p:1000,t:mccb*1000,sow:S.mccb});
+  if(relay) mdbItems.push({n:'Protective Relay Test',q:relay,u:'Set',p:3500,t:relay*3500,sow:S.relay_mdb});
+  if(mdbItems.length) secs.push({lbl:'แผงไฟฟ้าหลัก (MDB / ACB / CAP / MCCB)',qtLbl:'PM MDB & Electrical System Test',items:mdbItems,total:mdbItems.reduce((s,x)=>s+x.t,0)});
+
+  // DB
+  const dbItems=[];
+  const db=gn('v_db'),lp=gn('v_lp');
+  if(db) dbItems.push({n:'Distribution Board (DB) Std.',q:db,u:'Column',p:1000,t:db*1000,sow:S.db});
+  if(lp) dbItems.push({n:'Load Panel (LP) / Consumer Unit (CU) Std.',q:lp,u:'Panel',p:500,t:lp*500,sow:S.lp});
+  if(dbItems.length) secs.push({lbl:'ตู้จ่ายไฟ (DB / LP)',qtLbl:'PM Distribution Board',items:dbItems,total:dbItems.reduce((s,x)=>s+x.t,0)});
+
+  // Grounding
+  const gndQty=on('t_gnd_auto')?trList.length+mdbList.length:0;
+  if(gndQty) secs.push({lbl:'Grounding Resistance Test',qtLbl:'Grounding Resistance Test',items:[{n:'Grounding Resistance Test',q:gndQty,u:'จุด',p:1000,t:gndQty*1000,sow:S.gnd}],total:gndQty*1000});
+
+  // Thermo
+  if(on('t_thermo')){const q=Math.max(1,gn('v_thermo'));secs.push({lbl:'Infrared Thermo Scan',qtLbl:'Infrared Thermo Scan',items:[{n:'Infrared Thermo Scan',q,u:'ครั้ง',p:15000,t:q*15000,sow:S.thermo}],total:q*15000});}
+
+  // Endorsement
+  const eItems=[];
+  if(on('t_labour')) eItems.push({n:'เอกสารรับรองกรมสวัสดิการและคุ้มครองแรงงาน (กระทรวงแรงงาน)',q:1,u:'Set',p:15000,t:15000,sow:S.endorse,hideScope:true});
+  if(on('t_indus')) eItems.push({n:'เอกสารรับรองสำนักเทคโนโลยีความปลอดภัย (กรมโรงงานอุตสาหกรรม)',q:1,u:'Set',p:15000,t:15000,sow:S.endorse,hideScope:true});
+  if(eItems.length) secs.push({lbl:'เอกสารรับรองความปลอดภัย (Endorsement)',qtLbl:'Endorsement Document',items:eItems,total:eItems.reduce((s,x)=>s+x.t,0)});
+
+  // Lightning
+  const light=gn('v_light');
+  if(light) secs.push({lbl:'ระบบป้องกันฟ้าผ่า (Lightning Protection)',qtLbl:'ESE Lightning Protection System',items:[{n:'ESE Lightning Protection System (Early Streamer Emission)',q:light,u:'Set',p:12000,t:light*12000,sow:S.lightning}],total:light*12000});
+
+  // Site Expense
+  const zMin=zoneMin();
+  const siteItems=[];
+  if(zMin>0) siteItems.push({n:`ค่าเดินทางตามโซน (${zoneLabel()})`,q:1,u:'Job',p:zMin,t:zMin,warn:'กอล์ฟรีวิวราคาอีกครั้ง'});
+  if(on('t_safety')) siteItems.push({n:'Safety Training & PPE Equipment',q:1,u:'Job',p:0,t:0,tbd:true});
+  if(on('t_gen'))    siteItems.push({n:'Generator & Fuel',q:1,u:'Job',p:0,t:0,tbd:true});
+  if(on('t_lift'))   siteItems.push({n:'Boom Lift / X-Lift for Rent',q:1,u:'Job',p:0,t:0,tbd:true});
+  if(on('t_extraday')) siteItems.push({n:'Extra Work Day',q:1,u:'Job',p:0,t:0,tbd:true});
+  if(on('t_overnight')) siteItems.push({n:'ค้างคืน (ที่พัก + เบี้ยเลี้ยง)',q:1,u:'Job',p:0,t:0,tbd:true});
+  if(siteItems.length) secs.push({lbl:'ค่าดำเนินการและค่าเดินทาง (Site Expense)',qtLbl:'ค่าดำเนินการ ค่าเดินทาง และค่าจัดทำรายงาน',items:siteItems,total:siteItems.reduce((s,x)=>s+x.t,0)});
+
+  // Fire Pump
+  const fpCost=parseInt($('v_fp_cost')?.value||0)||0;
+  const fpMarkup=Math.round(fpCost*0.20),fpCoord=Math.round(fpCost*0.05),fpCont=Math.round(fpCost*0.05);
+  const fpSell=fpCost+fpMarkup+fpCoord+fpCont;
+  if(on('t_fp')&&fpCost>0){
+    secs.push({lbl:'PM Fire Pump System',qtLbl:'PM Fire Pump System',items:[{n:`PM Fire Pump System (ต้นทุน ${fpCost.toLocaleString('th-TH')}฿ + Markup 20% + Coordination 5% + Contingency 5%)`,q:1,u:'Job',p:fpSell,t:fpSell,sow:S.fp}],total:fpSell});
+  }
+
+  const sub=secs.reduce((s,x)=>s+x.total,0);
+  const vat=Math.round(sub*.07);
+  const grand=sub+vat;
+
+  const warns=[];
+  if(mdbTotalCols>30) warns.push('MDB column รวมเกิน 30 — อาจต้องใช้เวลา >1 วัน');
+  if(on('t_gnd_auto')&&gndQty===0) warns.push('Grounding Resistance Test เปิดอยู่ แต่ยังไม่มี TR หรือ MDB ให้ระบบนับจำนวนจุด');
+  if(trItems.some(t=>t.warn)) warns.push('มี kVA ที่ไม่อยู่ใน price list — ให้กอล์ฟกำหนดราคา');
+  if(on('t_fp')&&gn('v_fpm')+gn('v_fpj')+gn('v_fpd')===0) warns.push('PM Fire Pump: ยังไม่ระบุจำนวน pump');
+  if(on('t_fp')&&fpCost===0) warns.push('PM Fire Pump: ยังไม่ได้ราคาต้นทุนจาก Supplier — ใช้ RFQ Mode (รอราคา)');
+
+  return {secs,sub,vat,grand,warns,gndQty,fpCost,fpMarkup,fpCoord,fpCont,fpSell};
+}
+
+function render(){
+  const d=compute();
+  $('gtot').textContent='฿'+d.grand.toLocaleString('th-TH');
+  if($('gnd_auto_qty'))$('gnd_auto_qty').textContent=(d.gndQty||0)+' จุด';
+  const fpBox=$('fp_calc_box');
+  if(fpBox){
+    if(d.fpCost>0){
+      fpBox.innerHTML=`<div class="fp-calc">
+        <div class="fp-calc-row"><span>ต้นทุน Supplier</span><span>${d.fpCost.toLocaleString('th-TH')}฿</span></div>
+        <div class="fp-calc-row"><span>Markup 20%</span><span>+${d.fpMarkup.toLocaleString('th-TH')}฿</span></div>
+        <div class="fp-calc-row"><span>Coordination 5%</span><span>+${d.fpCoord.toLocaleString('th-TH')}฿</span></div>
+        <div class="fp-calc-row"><span>Contingency 5%</span><span>+${d.fpCont.toLocaleString('th-TH')}฿</span></div>
+        <div class="fp-calc-row tot"><span>ราคาขาย</span><span>${d.fpSell.toLocaleString('th-TH')}฿</span></div>
+      </div>`;
+    } else fpBox.innerHTML='';
+  }
+  if(curTab==='myqt') return renderMyQT();
+  if(curTab==='prequote') return renderPreQuotation(d);
+  if(curTab==='boq') renderBOQ(d);
+  else if(curTab==='qt') renderQT(d);
+  else renderScope(d);
+}
+
+function renderBOQ(d){
+  const cust=$('mc').value||'(ยังไม่กรอกชื่อลูกค้า)';
+  const site=$('ms').value||'';
+  const phone=$('mphone').value||'—';
+  const email=$('memail').value||'—';
+  let h='';
+  if(d.warns.length){h+=`<div class="warns">`+d.warns.map(w=>`<div class="witem">⚠ ${w}</div>`).join('')+`</div>`;}
+  if(!d.secs.length){h+=`<div class="empty-state"><div class="ei">⚡</div><p style="color:#6B7280">กรอกข้อมูลทางซ้ายเพื่อ draft BOQ</p></div>`;$('out-content').innerHTML=h;return;}
+
+  h+=`<div class="qt-paper export-frame" id="boq-print-area">
+    <div class="qt-paper-head">
+      <div class="qt-paper-left qt-logo-row">
+        <img class="qt-logo-img" src="data:image/jpeg;base64,${LOGO_B64}" alt="CKS Logo">
+        <div>
+          <div class="qt-co-name">บริษัท ซีเคเอส พาวเวอร์ เอ็นจิเนียริ่ง จำกัด</div>
+          <div class="qt-co-addr">165 ซ.รามคำแหง 2 ซ.23 แยก 9 แขวงดอกไม้ เขตประเวศ กทม. 10250<br>Tel: 02-337-6110 | Email: ckspowerengineering@gmail.com</div>
+        </div>
+      </div>
+      <div class="qt-doc-block">
+        <div class="qt-doc-type">BOQ INTERNAL</div>
+        <div class="qt-doc-meta">วันที่: ${today()}<br>สถานะ: <span style="color:#D97706;font-weight:600">Draft — Internal Review</span></div>
+      </div>
+    </div>
+    <div class="qt-parties">
+      <div><div class="qt-party-lbl">ลูกค้า</div><div class="qt-party-val">${cust}</div><div style="font-size:.78rem;color:var(--mut)">${site||'—'}<br>Tel: ${phone} | Email: ${email}</div></div>
+      <div><div class="qt-party-lbl">โครงการ</div><div class="qt-party-val">${$('mp').value||'—'}</div></div>
+    </div>
+    <table class="boq-tbl">
+      <thead><tr><th style="width:36px">#</th><th>รายการ</th><th style="width:54px;text-align:center">จำนวน</th><th style="width:54px">หน่วย</th><th style="width:90px;text-align:right">ราคา/หน่วย</th><th style="width:100px;text-align:right">จำนวนเงิน (฿)</th></tr></thead>
+      <tbody>`;
+
+  let rowNum=1;
+  d.secs.forEach((s,si)=>{
+    h+=`<tr class="grp-row"><td colspan="6">รายการที่ ${si+1} — ${s.lbl}</td></tr>`;
+    s.items.forEach(it=>{
+      h+=`<tr class="${it.warn||it.tbd?'sub-row':''}">
+        <td style="color:#9CA3AF;font-family:var(--mono);font-size:.72rem">${rowNum++}</td>
+        <td class="${it.warn?'warn-cell':''}">${it.n}${it.warn?`<span class="wb">⚠ ${it.warn}</span>`:''}${it.tbd?`<span class="wb" style="background:#FEF3C7;color:#92600A">⚠ รอกอล์ฟใส่ราคา</span>`:''}</td>
+        <td class="num" style="text-align:center">${it.q}</td>
+        <td class="unit">${it.u}</td>
+        <td class="num">${it.tbd?'<span style="color:#D97706;font-weight:700">TBD</span>':fmt(it.p)}</td>
+        <td class="num">${it.tbd?'<span style="color:#D97706;font-weight:700">—</span>':fmt(it.t)}</td>
+      </tr>`;
+      if(it.sow&&it.sow.length&&!it.hideScope){
+        h+=`<tr class="sow-row"><td></td><td colspan="5"><ul class="sow-list">${it.sow.map(s=>`<li>${s}</li>`).join('')}</ul></td></tr>`;
+      }
+    });
+    h+=`<tr class="tot-row"><td colspan="5" style="text-align:right;font-size:.75rem;color:var(--mut)">รวมรายการที่ ${si+1}</td><td class="num">${fmt(s.total)}</td></tr>`;
+  });
+
+  if(on('t_fp')&&d.fpCost===0){h+=`<tr class="sub-row"><td style="color:#9CA3AF;font-family:var(--mono);font-size:.72rem">${rowNum}</td><td colspan="4">PM Fire Pump System <span class="wb">⚠ รอราคาจาก Supplier</span></td><td class="num">—</td></tr>`;}
+
+  h+=`<tr><td colspan="5" style="text-align:right;padding:10px 10px 4px;color:var(--mut);font-size:.78rem">รวมก่อน VAT</td><td class="num" style="padding:10px 10px 4px">${fmt(d.sub)}</td></tr>`;
+  h+=`<tr><td colspan="5" style="text-align:right;padding:4px 10px;color:var(--mut);font-size:.75rem">VAT 7%</td><td class="num" style="padding:4px 10px;color:var(--mut)">${fmt(d.vat)}</td></tr>`;
+  h+=`<tr class="grand-row"><td colspan="5">ยอดรวมทั้งสิ้น (Grand Total)</td><td class="num">${fmt(d.grand)} บาท</td></tr>`;
+  h+=`</tbody></table></div>`;
+  $('out-content').innerHTML=h;
+}
+
+function renderQT(d){
+  const cust=$('mc').value||'(ยังไม่กรอกชื่อลูกค้า)';
+  const site=$('ms').value||'—';
+  const proj=$('mp').value||'Electrical Preventive Maintenance';
+  const wdate=$('mdate').value?new Date($('mdate').value).toLocaleDateString('th-TH',{day:'2-digit',month:'long',year:'numeric'}):today();
+  const exp=$('mexp').value?new Date($('mexp').value).toLocaleDateString('th-TH',{day:'2-digit',month:'long',year:'numeric'}):'15 วันนับจากวันที่เสนอ';
+  const phone=$('mphone').value||'—';
+  const email=$('memail').value||'—';
+  const issuer=$('missuer').value||'—';
+
+  let h='';
+  if(!d.secs.length){h+=`<div class="empty-state"><div class="ei">📋</div><p style="color:#6B7280">กรอกข้อมูลทางซ้าย</p></div>`;$('out-content').innerHTML=h;return;}
+
+  h+=`<div class="qt-paper export-frame" id="qt-print-area">
+    <div class="qt-paper-head">
+      <div class="qt-paper-left qt-logo-row">
+        <img class="qt-logo-img" src="data:image/jpeg;base64,${LOGO_B64}" alt="CKS Logo">
+        <div class="qt-co-addr-block">
+          <div class="qt-co-name">บริษัท ซีเคเอส พาวเวอร์ เอ็นจิเนียริ่ง จำกัด</div>
+          <div class="qt-co-addr">CKS POWER ENGINEERING CO.,LTD.<br>165 ซ.รามคำแหง 2 ซ.23 แยก 9 แขวงดอกไม้ เขตประเวศ กทม. 10250<br>Tel: 02-337-6110 | Email: ckspowerengineering@gmail.com<br>เลขประจำตัวผู้เสียภาษีอากร: 0105559101159</div>
+        </div>
+      </div>
+      <div class="qt-doc-block">
+        <div class="qt-doc-type">QUOTATION</div>
+        <div class="qt-doc-meta" style="text-align:right">วันที่: ${today()}<br>อายุใบเสนอราคา: ${exp}</div>
+      </div>
+    </div>
+    <div class="qt-parties">
+      <div><div class="qt-party-lbl">เรียน / Attention</div><div class="qt-party-val">${cust}</div><div style="font-size:.78rem;color:var(--mut)">${site}<br>Tel: ${phone} | Email: ${email}</div></div>
+      <div><div class="qt-party-lbl">โครงการ / Project</div><div class="qt-party-val">${proj}</div><div style="font-size:.78rem;color:var(--mut)">วันเข้า Site Survey: ${wdate}<br>ผู้ออกใบเสนอราคา: ${issuer}</div></div>
+    </div>
+    <table class="qt-tbl">
+      <thead><tr><th style="width:36px">ลำดับ</th><th>รายการ</th><th style="width:110px;text-align:right">จำนวนเงิน (฿)</th></tr></thead>
+      <tbody>`;
+
+  d.secs.forEach((s,i)=>{
+    const hasTbd=s.items.some(x=>x.tbd);
+    const totalDisplay=hasTbd&&s.total===0?'<span style="color:#D97706;font-weight:700">ระบุราคาภายหลัง</span>':s.total.toLocaleString('th-TH');
+    h+=`<tr><td style="font-family:var(--mono);color:#9CA3AF">${i+1}</td><td>${s.qtLbl}${hasTbd?'<span style="font-size:.7rem;background:#FEF3C7;color:#92600A;padding:1px 6px;border-radius:4px;margin-left:6px;font-weight:700">รอกอล์ฟยืนยันราคา</span>':''}</td><td class="qr">${totalDisplay}</td></tr>`;
+  });
+  if(on('t_fp')&&d.fpCost===0) h+=`<tr><td style="font-family:var(--mono);color:#9CA3AF">${d.secs.length+1}</td><td>PM Fire Pump System <span class="wb">รอราคาซัพ</span></td><td class="qr">—</td></tr>`;
+  h+=`<tr class="qt-tot"><td></td><td style="text-align:right;color:var(--mut)">รวมก่อนภาษีมูลค่าเพิ่ม</td><td class="qr">${d.sub.toLocaleString('th-TH')}</td></tr>`;
+  h+=`<tr class="qt-vat"><td></td><td style="text-align:right">ภาษีมูลค่าเพิ่ม 7%</td><td class="qr">${d.vat.toLocaleString('th-TH')}</td></tr>`;
+  h+=`<tr class="qt-grand"><td></td><td>ราคารวมทั้งสิ้น (Grand Total)</td><td class="qr">${d.grand.toLocaleString('th-TH')} บาท</td></tr>`;
+  h+=`</tbody></table>
+    <div class="remark-box">
+      <b>หมายเหตุ (REMARK):</b><br>
+      1. การทำงานมีการตัดกระแสไฟฟ้า ระยะเวลาดำเนินงานประมาณ 6–8 ชั่วโมง<br>
+      2. เงื่อนไขการชำระเงิน: 100% หลังดำเนินงานแล้วเสร็จ พร้อมส่งรายงาน<br>
+      3. ระยะเวลาดำเนินงาน: 1 วัน (Shutdown) + Thermoscan (ถ้ามี)<br>
+      4. ราคานี้ไม่รวมงานซ่อม/เปลี่ยนอุปกรณ์ที่พบระหว่าง PM — จะเสนอราคาแยก<br>
+      5. อายุใบเสนอราคา: ${exp}
+    </div>
+  </div>`;
+  $('out-content').innerHTML=h;
+}
+
+function renderPreQuotation(d){
+  const items=getScopeSummaryItems(d);
+  const cust=esc($('mc').value||'ลูกค้า');
+  const site=esc($('ms').value||'—');
+  const proj=esc($('mp').value||'—');
+  const survey=$('mdate').value?esc(new Date($('mdate').value).toLocaleDateString('th-TH',{day:'2-digit',month:'long',year:'numeric'})):'—';
+
+  if(!items.length){
+    $('out-content').innerHTML=`<div class="prequote-paper">
+      <div class="empty-state">
+        <div class="ei">📄</div>
+        <p style="color:#374151;font-weight:700;margin-bottom:4px">ยังไม่มี Scope สำหรับสร้าง Pre-Quotation Report</p>
+        <p style="color:#6B7280">กรุณาเลือกขอบเขตงานจากฝั่งซ้ายก่อน</p>
+      </div>
+    </div>`;
+    return;
+  }
+
+  const sections=items.map((it,i)=>`<div class="pq-section">
+    <div class="pq-section-title">${i+1}. ${esc(it.title)}</div>
+    <div class="pq-risk">${esc(it.risk_hook)}</div>
+    <div class="pq-body">${esc(it.body)}</div>
+  </div>`).join('');
+
+  $('out-content').innerHTML=`<div class="prequote-paper">
+    <div class="prequote-head">
+      <div class="prequote-brand">CKS Power Engineering</div>
+      <div class="prequote-title">Pre-Quotation Scope Summary</div>
+      <div class="prequote-subtitle">โครงการตรวจสอบและบำรุงรักษาระบบไฟฟ้าเชิงป้องกัน</div>
+    </div>
+
+    <div class="prequote-meta">
+      <div><b>สำหรับ:</b> ${cust}</div>
+      <div><b>สถานที่:</b> ${site}</div>
+      <div><b>โครงการ:</b> ${proj}</div>
+      <div><b>วันที่สำรวจ:</b> ${survey}</div>
+      <div><b>จัดทำโดย:</b> CKS Power Engineering</div>
+    </div>
+
+    <div class="prequote-intro">
+      จากการสำรวจหน้างานเบื้องต้นของ ${cust} ทาง CKS Power Engineering ได้รวบรวมขอบเขตงานที่ควรพิจารณาสำหรับการตรวจสอบและบำรุงรักษาระบบไฟฟ้าเชิงป้องกัน เพื่อช่วยลดความเสี่ยงด้านความปลอดภัย ลดโอกาสการหยุดชะงักของระบบไฟฟ้า และสนับสนุนให้โรงงานมีข้อมูลทางวิศวกรรมสำหรับวางแผนบำรุงรักษาอย่างเป็นระบบ
+    </div>
+
+    ${sections}
+
+    <div class="pq-next">
+      <div class="pq-section-title">Next Step from CKS</div>
+      <div class="pq-body">จากขอบเขตงานที่ระบุข้างต้น CKS Power Engineering จะนำข้อมูลการสำรวจหน้างานไปจัดทำใบเสนอราคา แผนการดำเนินงาน และรายละเอียดทางเทคนิคที่เหมาะสมกับสภาพหน้างานจริง เพื่อนำเสนอให้ทาง ${cust} พิจารณาในลำดับถัดไป</div>
+    </div>
+    <div class="pq-note">เอกสารฉบับนี้เป็นสรุปขอบเขตงานจากการสำรวจเบื้องต้น ไม่ใช่ใบเสนอราคา และยังไม่มีผลผูกพันด้านราคา</div>
+  </div>`;
+}
+
+function renderScope(d){
+  const inc=['General & Visual Inspection ทุกอุปกรณ์','Cleaning & Retightening Busbars และจุดต่อหลัก','Insulation Resistance Measurement','Basic Electrical Checklist & Recording','Basic PM Report with Measurement Data'];
+  if(on('t_thermo')) inc.push('Infrared Thermo Scan');
+  if(trList.some(t=>normalizeTR(t).type==='oil'&&t.addons.dga)) inc.push('DGA Test (Oil Sampling + Laboratory Analysis + Report)');
+  if(on('t_gnd_auto')) inc.push(`Grounding Resistance Measurement & Report (${d.gndQty||0} จุด)`);
+  if(on('t_labour')) inc.push('Endorsement — กรมสวัสดิการและคุ้มครองแรงงาน (วิศวกรเซ็นรับรอง)');
+  if(on('t_indus')) inc.push('Endorsement — สำนักเทคโนโลยีความปลอดภัย (วิศวกรเซ็นรับรอง)');
+  const exc=['งานซ่อมหรือเปลี่ยนอุปกรณ์ที่พบ defect ระหว่าง PM','งาน Overhaul นอกเหนือ Standard PM Scope','งานแก้ไข defect หลัง PM เสร็จสิ้น (ต้องออก Quote ใหม่)','Safety Training Day (กรณีลูกค้ากำหนด — ราคาแยกตามจริง)'];
+  if(trList.some(t=>normalizeTR(t).type==='dry')) exc.push('Oil Tests สำหรับ Dry Type Transformer');
+  let h=`<div class="qt-paper">
+    <div class="scope-box"><div class="scope-ttl">Included in Scope of Work</div>${inc.map(i=>`<div class="si">${i}</div>`).join('')}</div>
+    <div class="scope-box"><div class="scope-ttl">Excluded from Scope</div>${exc.map(e=>`<div class="sx">${e}</div>`).join('')}</div>
+  </div>`;
+  $('out-content').innerHTML=h;
+}
+
+function swTab(t,el){
+  curTab=t;
+  document.querySelectorAll('.otab').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+  render();
+}
+
+// ── EXPORT EXCEL WITH FORMULAS ─────────────────────────
+function doExport(){
+  if(!validateMeta())return;
+  const d=compute();
+  if(!d.grand&&!d.secs.length){alert('ยังไม่มีรายการ');return;}
+  const cust=$('mc').value||'ลูกค้า';
+  const site=$('ms').value||'';
+  const proj=$('mp').value||'PM Electrical Systems';
+  const phone=$('mphone').value||'';
+  const email=$('memail').value||'';
+  const survey=$('mdate').value?new Date($('mdate').value).toLocaleDateString('th-TH',{day:'2-digit',month:'long',year:'numeric'}):'';
+  const dt=today();
+  const wb=XLSX.utils.book_new();
+  wb.Workbook=wb.Workbook||{};
+  wb.Workbook.CalcPr={calcMode:'auto'};
+
+  // ── Helpers ──────────────────────────────────────────────────
+  // ใช้ SheetJS aoa_to_sheet → สร้าง .xlsx จริง (ไม่มี warning)
+  // สไตล์ผ่าน cell object: {v:value, t:type, s:{...}} — community edition ignore s แต่ data ถูกต้อง
+  const moneyFormula=(f,v=0)=>({t:'n',f,v,z:'#,##0'});
+  const tbdFormula=(f)=>({t:'s',f,v:'TBD'});
+  const sumFormula=refs=>refs.length?`SUM(${refs.join(',')})`:'0';
+
+  // ── BOQ Sheet ────────────────────────────────────────────────
+  const boq=[
+    ['บริษัท ซีเคเอส พาวเวอร์ เอ็นจิเนียริ่ง จำกัด','','','','','',''],
+    ['165 ซ.รามคำแหง 2 ซ.23 แยก 9 แขวงดอกไม้ เขตประเวศ กทม. 10250  Tel: 02-337-6110','','','','','',''],
+    ['','','','','','',''],
+    ['ลูกค้า:',cust,'','สถานที่:',site,'',''],
+    ['โทร:',phone,'','Email:',email,'',''],
+    ['โครงการ:',proj,'','วันเข้า Site Survey:',survey,'',''],
+    ['วันที่ออกเอกสาร:',dt,'','','',''],
+    ['BOQ INTERNAL DRAFT — ตรวจและ Approve โดยกอล์ฟก่อนส่งลูกค้า','','','','','',''],
+    ['','','','','','',''],
+    ['ลำดับ','รายการ / Scope of Work','จำนวน','หน่วย','ราคา/หน่วย (฿)','จำนวนเงิน (฿)','หมายเหตุ'],
+  ];
+  let rn=1;
+  const boqSectionTotalRows=[];
+  d.secs.forEach((s,si)=>{
+    boq.push([`รายการที่ ${si+1}`,s.lbl,'','','','','']);
+    const sectionStartRow=boq.length+1;
+    s.items.forEach(it=>{
+      const row=boq.length+1;
+      if(it.tbd){
+        boq.push([rn++,it.n,it.q,it.u,'TBD',tbdFormula(`IF(ISNUMBER(E${row}),C${row}*E${row},"TBD")`),'รอกอล์ฟใส่ราคา']);
+      } else {
+        boq.push([rn++,it.n,it.q,it.u,it.p,moneyFormula(`C${row}*E${row}`,it.t),it.warn||'']);
+      }
+      if(it.sow&&it.sow.length&&!it.hideScope){
+        boq.push(['','  Scope of Work:','','','','','']);
+        it.sow.forEach(sv=>boq.push(['',`    — ${sv}`,'','','','','']));
+      }
+    });
+    const sectionEndRow=boq.length;
+    const sectionTotalRow=boq.length+1;
+    boqSectionTotalRows.push(sectionTotalRow);
+    boq.push(['','รวมรายการที่ '+(si+1),'','','',moneyFormula(`SUM(F${sectionStartRow}:F${sectionEndRow})`,s.total),'']);
+    boq.push(['','','','','','','']);
+  });
+  if(on('t_fp')&&d.fpCost===0) boq.push([rn,'PM Fire Pump System — รอราคาจาก Supplier','','','','TBD','RFQ Mode']);
+  boq.push(['','','','','','','']);
+  const boqSubRow=boq.length+1;
+  boq.push(['','รวมก่อน VAT','','','',moneyFormula(sumFormula(boqSectionTotalRows.map(r=>`F${r}`)),d.sub),'']);
+  const boqVatRow=boq.length+1;
+  boq.push(['','ภาษีมูลค่าเพิ่ม (VAT 7%)','','','',moneyFormula(`F${boqSubRow}*0.07`,d.vat),'']);
+  boq.push(['','ยอดรวมทั้งสิ้น (GRAND TOTAL)','','','',moneyFormula(`F${boqSubRow}+F${boqVatRow}`,d.grand),'รวม VAT แล้ว']);
+
+  const ws1=XLSX.utils.aoa_to_sheet(boq);
+  ws1['!cols']=[{wch:8},{wch:55},{wch:8},{wch:8},{wch:16},{wch:16},{wch:24}];
+  // Merge header rows ─── company/address/draft title rows only
+  ws1['!merges']=[
+    {s:{r:0,c:0},e:{r:0,c:6}},{s:{r:1,c:0},e:{r:1,c:6}},
+    {s:{r:7,c:0},e:{r:7,c:6}},{s:{r:8,c:0},e:{r:8,c:6}},
+  ];
+  XLSX.utils.book_append_sheet(wb,ws1,'BOQ Internal');
+
+  // ── QT Sheet ─────────────────────────────────────────────────
+  const qt=[
+    ['บริษัท ซีเคเอส พาวเวอร์ เอ็นจิเนียริ่ง จำกัด','','',''],
+    ['CKS POWER ENGINEERING CO.,LTD.','','',''],
+    ['165 Ramkhamhaeng 2 Soi.23 Alley 9, Dongmai, Prawet, Bangkok 10250','','',''],
+    ['Tel: 02-337-6110  |  Email: ckspowerengineering@gmail.com  |  Tax ID: 0105559101159','','',''],
+    ['','','',''],
+    ['QUOTATION','','',''],
+    ['','','',''],
+    ['ลูกค้า / Customer:',cust,'วันที่ / Date:',dt],
+    ['โทร / Tel:',phone,'Email:',email],
+    ['สถานที่ / Site:',site,'โครงการ / Project:',proj],
+    ['วันเข้า Site Survey:',survey,'',''],
+    ['','','',''],
+    ['Items','Descriptions','จำนวนเงิน (฿)','Remark'],
+  ];
+  const qtAmountRows=[];
+  d.secs.forEach((s,i)=>{
+    const hasTbd=s.items.some(x=>x.tbd);
+    const row=qt.length+1;
+    const boqRef=`'BOQ Internal'!F${boqSectionTotalRows[i]}`;
+    qtAmountRows.push(row);
+    if(hasTbd&&s.total===0){
+      qt.push([i+1,s.qtLbl,tbdFormula(`IF(${boqRef}=0,"TBD",${boqRef})`),'รอกอล์ฟยืนยันราคา']);
+    } else {
+      qt.push([i+1,s.qtLbl,moneyFormula(boqRef,s.total),'']);
+    }
+  });
+  if(on('t_fp')&&d.fpCost===0) qt.push([d.secs.length+1,'PM Fire Pump System','TBD','RFQ Mode']);
+  qt.push(['','','','']);
+  const qtSubRow=qt.length+1;
+  qt.push(['','รวมก่อนภาษีมูลค่าเพิ่ม (Sub Total)',moneyFormula(sumFormula(qtAmountRows.map(r=>`C${r}`)),d.sub),'']);
+  const qtVatRow=qt.length+1;
+  qt.push(['','ภาษีมูลค่าเพิ่ม (VAT 7%)',moneyFormula(`C${qtSubRow}*0.07`,d.vat),'']);
+  qt.push(['','ราคารวมทั้งสิ้น (GRAND TOTAL)',moneyFormula(`C${qtSubRow}+C${qtVatRow}`,d.grand),'รวม VAT แล้ว']);
+  qt.push(['','','','']);
+  qt.push(['หมายเหตุ / REMARK:','','','']);
+  [
+    '1. การทำงานมีการตัดกระแสไฟฟ้า ระยะเวลาดำเนินงานประมาณ 6–8 ชั่วโมง',
+    '2. เงื่อนไขการชำระเงิน: 100% หลังดำเนินงานแล้วเสร็จ พร้อมส่งรายงาน',
+    '3. ราคานี้ไม่รวมงานซ่อม/เปลี่ยนอุปกรณ์ที่พบระหว่าง PM — จะเสนอราคาแยก',
+    '4. ราคาข้างต้นยังไม่รวม Safety Training, Generator, Boom Lift หากมีจะเพิ่มตามจริง',
+    '5. อายุใบเสนอราคา 15 วัน นับจากวันที่ออกใบเสนอราคา',
+  ].forEach(r=>qt.push(['',r,'','']));
+
+  const ws2=XLSX.utils.aoa_to_sheet(qt);
+  ws2['!cols']=[{wch:10},{wch:55},{wch:20},{wch:28}];
+  ws2['!merges']=[
+    {s:{r:0,c:0},e:{r:0,c:3}},{s:{r:1,c:0},e:{r:1,c:3}},
+    {s:{r:2,c:0},e:{r:2,c:3}},{s:{r:3,c:0},e:{r:3,c:3}},
+    {s:{r:4,c:0},e:{r:4,c:3}},{s:{r:5,c:0},e:{r:5,c:3}},
+    {s:{r:6,c:0},e:{r:6,c:3}},
+  ];
+  XLSX.utils.book_append_sheet(wb,ws2,'QT ลูกค้า');
+
+  // ── Write as proper .xlsx (ไม่มี warning) ────────────────────
+  const wbBuf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  const blob=new Blob([wbBuf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`CKS_PM_BOQ_${cust.replace(/[^a-zA-Z0-9ก-๙]/g,'_')}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+  showToast('⬇ Export .xlsx สำเร็จ (BOQ + QT)');
+}
+
+
+function clearAll(){
+  if(!confirm('ล้างข้อมูลทั้งหมดใช่ไหม?'))return;
+  trList=[];
+  mdbList=[];
+  META_FIELDS.forEach(([id])=>{if($(id)){$(id).value='';$(id).classList.remove('required-missing');}});
+  ['mdate','mexp'].forEach(id=>{if($(id))$(id).value='';});
+  if($('m_zone'))$('m_zone').value='0';
+  if($('m_zone_custom')){$('m_zone_custom').value='';$('m_zone_custom').style.display='none';}
+  const nums=['hv_pair','hv_single','hv_la','hv_vcb','hv_rmu','hv_relay','v_acb','v_cap','v_mccb','v_relay','v_db','v_lp','v_thermo','v_light','v_fpm','v_fpj','v_fpd'];
+  nums.forEach(id=>{if($(id))$(id).value=0;const dp=$('d_'+id);if(dp)dp.textContent='0';});
+  $('v_thermo').value=1;$('d_v_thermo').textContent='1';
+  document.querySelectorAll('.tgl.on').forEach(t=>t.classList.remove('on'));
+  ['fp_detail','thermo_qty'].forEach(id=>{if($(id))$(id).style.display='none';});
+  if($('fp_calc_box'))$('fp_calc_box').innerHTML='';
+  if($('v_fp_cost'))$('v_fp_cost').value='';
+  buildTR();buildMDB();render();
+}
+
+function genRFQ(){
+  const cust=$('mc').value||'—',site=$('ms').value||'—';
+  alert(`=== CKS PM Fire Pump — RFQ Package ===\nลูกค้า: ${cust}\nสถานที่: ${site}\n\nMain Pump: ${gn('v_fpm')} / Jockey: ${gn('v_fpj')} / Diesel: ${gn('v_fpd')}\nFlow Test: ${on('t_fpflow')?'Yes':'No'} / Report: ${on('t_fprep')?'Yes':'No'}\n\nเอกสารที่ต้องแนบ:\n• รูป nameplate pump ทุกตัว\n• รูป controller panel\n• Safety requirement ของไซต์\n\nกรุณาส่งราคากลับมาภายใน 3 วันทำการ`);
+}
+
+function showToast(msg){
+  const t=$('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ── EXPORT PDF (QT customer quotation) ──────────────────
+// วาดกรอบเขียวรอบหน้ากระดาษ
+function drawPageFrame(pdf,margin){
+  const pageW=pdf.internal.pageSize.getWidth();
+  const pageH=pdf.internal.pageSize.getHeight();
+  pdf.setDrawColor(4,82,43);
+  pdf.setLineWidth(1.2);
+  pdf.rect(margin/2,margin/2,pageW-margin,pageH-margin);
+}
+
+// วาง canvas ลง PDF โดยรักษาสัดส่วนเดิม (ไม่บีบ) — ถ้ายาวเกิน 1 หน้า จะแตกเป็นหลายหน้าอัตโนมัติ
+function addCanvasMultiPage(pdf,canvas,margin,isFirstOfDoc){
+  const pageW=pdf.internal.pageSize.getWidth();
+  const pageH=pdf.internal.pageSize.getHeight();
+  const imgW=pageW-margin*2;
+  const imgH=canvas.height*imgW/canvas.width; // สัดส่วนจริง ไม่บีบ
+  const imgData=canvas.toDataURL('image/png');
+  const usableH=pageH-margin*2;
+
+  if(!isFirstOfDoc)pdf.addPage();
+  let position=margin;
+  let heightLeft=imgH;
+  drawPageFrame(pdf,margin);
+  pdf.addImage(imgData,'PNG',margin,position,imgW,imgH);
+  heightLeft-=usableH;
+
+  while(heightLeft>0){
+    pdf.addPage();
+    drawPageFrame(pdf,margin);
+    position=margin-(imgH-heightLeft);
+    pdf.addImage(imgData,'PNG',margin,position,imgW,imgH);
+    heightLeft-=usableH;
+  }
+}
+
+async function doExportPDF(){
+  if(!validateMeta())return;
+  const d=compute();
+  if(!d.grand){alert('ยังไม่มีรายการ กรุณากรอกข้อมูล');return;}
+  const prevTab=curTab;
+
+  showToast('⏳ กำลังสร้าง PDF...');
+  try{
+    const {jsPDF}=window.jspdf;
+    const pdf=new jsPDF('p','mm','a4');
+    const margin=8;
+
+    // BOQ Internal — แตกหลายหน้าได้ตามความยาวจริง
+    curTab='boq'; render();
+    await new Promise(r=>setTimeout(r,150));
+    const boqNode=document.getElementById('boq-print-area');
+    if(!boqNode){alert('ไม่พบเอกสาร BOQ สำหรับ Export PDF');curTab=prevTab;render();return;}
+    const boqCanvas=await html2canvas(boqNode,{scale:2,backgroundColor:'#ffffff'});
+    addCanvasMultiPage(pdf,boqCanvas,margin,true);
+
+    // QUOTATION (ลูกค้า) — ต่อจากหน้า BOQ เป็นหน้าใหม่เสมอ
+    curTab='qt'; render();
+    await new Promise(r=>setTimeout(r,150));
+    const qtNode=document.getElementById('qt-print-area');
+    if(!qtNode){alert('ไม่พบเอกสาร QT สำหรับ Export PDF');curTab=prevTab;render();return;}
+    const qtCanvas=await html2canvas(qtNode,{scale:2,backgroundColor:'#ffffff'});
+    addCanvasMultiPage(pdf,qtCanvas,margin,false);
+
+    const cust=$('mc').value||'ลูกค้า';
+    pdf.save(`CKS_QT_${cust.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+    showToast('⬇ Export PDF สำเร็จ (BOQ + QT)');
+  }catch(e){
+    console.error(e);
+    alert('สร้าง PDF ไม่สำเร็จ: '+e.message);
+  }
+  curTab=prevTab; render();
+}
+
+async function doExportPreQuotation(){
+  if(!validateMeta())return;
+  const d=compute();
+  const items=getScopeSummaryItems(d);
+  if(!items.length){
+    alert('ยังไม่มี Scope สำหรับสร้าง Pre-Quotation Report');
+    return;
+  }
+
+  const prevTab=curTab;
+  curTab='prequote';
+  render();
+
+  await new Promise(r=>setTimeout(r,300));
+
+  const target=document.querySelector('#out-content .prequote-paper');
+  if(!target){
+    alert('ไม่พบเอกสาร Pre-Quotation สำหรับ Export');
+    curTab=prevTab;
+    render();
+    return;
+  }
+
+  showToast('⏳ กำลังสร้าง Pre-Quotation PDF...');
+  try{
+    const {jsPDF}=window.jspdf;
+    const canvas=await html2canvas(target,{
+      scale:2,
+      useCORS:true,
+      backgroundColor:'#FFFFFF'
+    });
+
+    const imgData=canvas.toDataURL('image/png');
+    const pdf=new jsPDF('p','mm','a4');
+    const pageWidth=210;
+    const pageHeight=297;
+    const margin=10;
+    const imgWidth=pageWidth-margin*2;
+    const imgHeight=canvas.height*imgWidth/canvas.width;
+
+    let heightLeft=imgHeight;
+    let position=margin;
+
+    pdf.addImage(imgData,'PNG',margin,position,imgWidth,imgHeight);
+    heightLeft-=pageHeight-margin*2;
+
+    while(heightLeft>0){
+      pdf.addPage();
+      position=margin-(imgHeight-heightLeft);
+      pdf.addImage(imgData,'PNG',margin,position,imgWidth,imgHeight);
+      heightLeft-=pageHeight-margin*2;
+    }
+
+    const cust=$('mc').value||'Customer';
+    const safeName=cust.replace(/[\\/:*?"<>|]/g,'_');
+    pdf.save(`CKS_Pre-Quotation_Scope_${safeName}.pdf`);
+    showToast('⬇ Export Pre-Quotation สำเร็จ');
+  }catch(e){
+    console.error(e);
+    alert('สร้าง Pre-Quotation PDF ไม่สำเร็จ: '+e.message);
+  }finally{
+    curTab=prevTab;
+    render();
+  }
+}
+
+// ── SAVE QT / MY QT (Google Sheet backend ผ่าน Apps Script Web App) ──────
+const BACKEND_KEY='cks_qt_backend_url';
+
+function getBackendUrl(){
+  return localStorage.getItem(BACKEND_KEY)||'';
+}
+
+function setupBackendUrl(){
+  const cur=getBackendUrl();
+  const url=prompt('วาง Apps Script Web App URL (ได้จากตอน Deploy):',cur);
+  if(url===null)return;
+  localStorage.setItem(BACKEND_KEY,url.trim());
+  showToast(url.trim()?'✔ บันทึก URL แล้ว':'⚠ ล้าง URL แล้ว');
+  if(curTab==='myqt')render();
+}
+
+// เก็บ state ทั้งหมดของฟอร์มฝั่งซ้ายแบบ generic — ไม่ต้อง maintain field list เอง
+function collectState(){
+  const state={meta:{},numbers:{},selects:{},toggles:{},trList:JSON.parse(JSON.stringify(trList)),mdbList:JSON.parse(JSON.stringify(mdbList))};
+  document.querySelectorAll('#left input[id]').forEach(el=>{
+    if(el.closest('#tr_list')||el.closest('#mdb_list'))return;
+    if(el.type==='number'||el.type==='hidden')state.numbers[el.id]=el.value;
+    else state.meta[el.id]=el.value;
+  });
+  document.querySelectorAll('#left select[id]').forEach(el=>{
+    if(el.closest('#tr_list')||el.closest('#mdb_list'))return;
+    state.selects[el.id]=el.value;
+  });
+  document.querySelectorAll('#left .tgl[id]').forEach(el=>{
+    if(el.closest('#tr_list')||el.closest('#mdb_list'))return;
+    state.toggles[el.id]=el.classList.contains('on');
+  });
+  return state;
+}
+
+function applyState(state){
+  trList=JSON.parse(JSON.stringify(state.trList||[]));
+  mdbList=JSON.parse(JSON.stringify(state.mdbList||[]));
+  Object.entries(state.meta||{}).forEach(([id,v])=>{if($(id))$(id).value=v;});
+  Object.entries(state.numbers||{}).forEach(([id,v])=>{
+    if($(id))$(id).value=v;
+    const dp=$('d_'+id); if(dp)dp.textContent=v;
+  });
+  Object.entries(state.selects||{}).forEach(([id,v])=>{if($(id))$(id).value=v;});
+  document.querySelectorAll('#left .tgl[id]').forEach(el=>{
+    if(!el.closest('#tr_list')&&!el.closest('#mdb_list'))el.classList.remove('on');
+  });
+  Object.entries(state.toggles||{}).forEach(([id,v])=>{if(v&&$(id))$(id).classList.add('on');});
+  // sync dependent show/hide ที่ tog() ปกติจัดการให้
+  if($('fp_detail'))$('fp_detail').style.display=on('t_fp')?'block':'none';
+  if($('thermo_qty'))$('thermo_qty').style.display=on('t_thermo')?'inline-flex':'none';
+  if($('m_zone'))zoneMin();
+  buildTR();buildMDB();
+  curTab='qt';
+  document.querySelectorAll('.otab').forEach(x=>x.classList.remove('on'));
+  const qtTabEl=[...document.querySelectorAll('.otab')].find(x=>x.textContent.trim()==='QT ลูกค้า');
+  if(qtTabEl)qtTabEl.classList.add('on');
+  render();
+}
+
+async function saveQT(){
+  if(!validateMeta())return;
+  const url=getBackendUrl();
+  if(!url){alert('ยังไม่ได้ตั้งค่า Apps Script URL — กดปุ่ม "⚙ ตั้งค่า" ก่อน');return;}
+  const d=compute();
+  if(!d.grand&&!d.secs.length){alert('ยังไม่มีรายการ กรุณากรอกข้อมูล');return;}
+
+  const payload={
+    action:'save',
+    customer:$('mc').value,
+    site:$('ms').value,
+    project:$('mp').value,
+    issuer:$('missuer').value,
+    total:d.grand,
+    savedAt:new Date().toISOString(),
+    state:collectState()
+  };
+
+  showToast('⏳ กำลัง Save QT...');
+  try{
+    const res=await fetch(url,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'}, // เลี่ยง CORS preflight ของ Apps Script
+      body:JSON.stringify(payload)
+    });
+    const j=await res.json();
+    if(j.ok){
+      showToast('✔ Save QT สำเร็จ: '+(j.id||''));
+    }else{
+      alert('Save ไม่สำเร็จ: '+(j.error||'unknown error'));
+    }
+  }catch(e){
+    console.error(e);
+    alert('เชื่อมต่อ Backend ไม่สำเร็จ: '+e.message+'\n\nเช็คว่า Apps Script deploy เป็น "Anyone" แล้ว และ URL ถูกต้อง');
+  }
+}
+
+async function renderMyQT(){
+  const url=getBackendUrl();
+  const out=$('out-content');
+  if(!url){
+    out.innerHTML=`<div class="empty-state"><div class="ei">⚙</div>
+      <p style="color:#374151;font-weight:700;margin-bottom:4px">ยังไม่ได้ตั้งค่า Backend</p>
+      <p style="color:#6B7280">กดปุ่ม "⚙ ตั้งค่า" มุมขวาบนเพื่อวาง Apps Script Web App URL</p></div>`;
+    return;
+  }
+  out.innerHTML=`<div class="empty-state"><div class="ei">⏳</div><p style="color:#6B7280">กำลังโหลดรายการ...</p></div>`;
+  try{
+    const res=await fetch(url+'?action=list');
+    const j=await res.json();
+    if(!j.ok)throw new Error(j.error||'unknown error');
+    const items=j.items||[];
+    if(!items.length){
+      out.innerHTML=`<div class="empty-state"><div class="ei">📁</div><p style="color:#6B7280">ยังไม่มี QT ที่ save ไว้</p></div>`;
+      return;
+    }
+    out.innerHTML=`<div class="qt-paper" style="padding:14px 16px">
+      <div style="font-weight:700;margin-bottom:10px;color:var(--ink)">รายการ QT ที่ Save ไว้ (${items.length})</div>
+      ${items.map(it=>{
+        const done=it.status==='completed';
+        return `
+        <div style="display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:8px;gap:10px">
+          <div style="flex:1;min-width:0;cursor:pointer" onclick="loadSavedQT('${it.id}')">
+            <div style="font-weight:700;font-size:.88rem;color:var(--ink)">
+              ${esc(it.customer||'—')} <span style="color:var(--mut);font-weight:400">— ${esc(it.project||'')}</span>
+              <span style="font-size:.66rem;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:6px;vertical-align:middle;${done?'background:#DCFCE7;color:#166534':'background:#FEF3C7;color:#92600A'}">${done?'✔ ส่งลูกค้าแล้ว':'📝 ฉบับร่าง'}</span>
+            </div>
+            <div style="font-size:.74rem;color:var(--mut);margin-top:2px">${esc(it.site||'')} · บันทึกโดย ${esc(it.issuer||'—')} · ${new Date(it.savedAt).toLocaleString('th-TH')}</div>
+          </div>
+          <div style="font-family:var(--mono);font-weight:700;color:var(--g);white-space:nowrap">${(+it.total||0).toLocaleString('th-TH')}฿</div>
+          <button class="tbtn ${done?'tbtn-outline':'tbtn-export'}" style="${done?'':'background:#166534;border-color:#166534'};padding:6px 10px;font-size:.72rem" onclick="event.stopPropagation();toggleQTStatus('${it.id}','${done?'draft':'completed'}')">${done?'↺ กลับเป็นร่าง':'✔ Mark Completed'}</button>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }catch(e){
+    console.error(e);
+    out.innerHTML=`<div class="empty-state"><div class="ei">⚠</div><p style="color:#991B1B">โหลดรายการไม่สำเร็จ: ${esc(e.message)}</p></div>`;
+  }
+}
+
+async function toggleQTStatus(id,newStatus){
+  const url=getBackendUrl();
+  if(!url)return;
+  showToast(newStatus==='completed'?'⏳ กำลัง Mark ว่าส่งลูกค้าแล้ว...':'⏳ กำลังเปลี่ยนกลับเป็นร่าง...');
+  try{
+    const res=await fetch(url,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'updateStatus',id,status:newStatus})
+    });
+    const j=await res.json();
+    if(!j.ok)throw new Error(j.error||'unknown error');
+    showToast(newStatus==='completed'?'✔ Mark ว่าส่งลูกค้าแล้ว':'↺ เปลี่ยนกลับเป็นฉบับร่างแล้ว');
+    renderMyQT();
+  }catch(e){
+    console.error(e);
+    alert('อัปเดตสถานะไม่สำเร็จ: '+e.message);
+  }
+}
+
+async function loadSavedQT(id){
+  const url=getBackendUrl();
+  if(!url)return;
+  showToast('⏳ กำลังโหลด QT...');
+  try{
+    const res=await fetch(url+'?action=get&id='+encodeURIComponent(id));
+    const j=await res.json();
+    if(!j.ok)throw new Error(j.error||'unknown error');
+    applyState(j.state);
+    showToast('✔ โหลด QT สำเร็จ');
+  }catch(e){
+    console.error(e);
+    alert('โหลด QT ไม่สำเร็จ: '+e.message);
+  }
+}
+
+buildTR();buildMDB();render();
+</script>
+</body>
+</html>
